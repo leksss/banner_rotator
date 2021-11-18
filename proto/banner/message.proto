@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package banner;
+
+option go_package = "./;pb";
+
+message AddBannerRequest {
+  uint64 slotID = 1;
+  uint64 bannerID = 2;
+}
+
+message AddBannerResponse {
+  bool success = 1;
+  repeated Error errors = 2;
+}
+
+message RemoveBannerRequest {
+  uint64 slotID = 1;
+  uint64 bannerID = 2;
+}
+
+message RemoveBannerResponse {
+  bool success = 1;
+  repeated Error errors = 2;
+}
+
+message HitBannerRequest {
+  uint64 slotID = 1;
+  uint64 bannerID = 2;
+  uint64 groupID = 3;
+}
+
+message HitBannerResponse {
+  bool success = 1;
+  repeated Error errors = 2;
+}
+
+message GetBannerRequest {
+  uint64 slotID = 1;
+  uint64 groupID = 3;
+}
+
+message GetBannerResponse {
+  bool success = 1;
+  repeated Error errors = 2;
+  uint64 bannerID = 3;
+}
+
+message Error {
+  string code = 1;
+  string msg = 2;
+}

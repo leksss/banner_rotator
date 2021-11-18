@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package banner;
+
+import "message.proto";
+import "google/api/annotations.proto";
+
+option go_package = "./;pb";
+
+service bannerRotatorService {
+  rpc AddBanner (AddBannerRequest) returns (AddBannerResponse) {
+    option (google.api.http) = {
+      post: "/api/bannerRotatorService/v1/banner/add"
+      body: "*"
+    };
+  }
+
+  rpc RemoveBanner (RemoveBannerRequest) returns (RemoveBannerResponse) {
+    option (google.api.http) = {
+      post: "/api/bannerRotatorService/v1/banner/remove"
+      body: "*"
+    };
+  }
+
+  rpc HitBanner (HitBannerRequest) returns (HitBannerResponse) {
+    option (google.api.http) = {
+      post: "/api/bannerRotatorService/v1/banner/hit"
+      body: "*"
+    };
+  }
+
+  rpc GetBanner (GetBannerRequest) returns (GetBannerResponse) {
+    option (google.api.http) = {
+      post: "/api/bannerRotatorService/v1/banner/get"
+      body: "*"
+    };
+  }
+}
+
+
