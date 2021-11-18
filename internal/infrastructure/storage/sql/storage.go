@@ -8,8 +8,8 @@ import (
 
 	_ "github.com/go-sql-driver/mysql" // nolint
 	"github.com/jmoiron/sqlx"
-	"github.com/leksss/banner-rotator/internal/domain/interfaces"
-	"github.com/leksss/banner-rotator/internal/infrastructure/logger"
+	"github.com/leksss/banner_rotator/internal/domain/interfaces"
+	"github.com/leksss/banner_rotator/internal/infrastructure/logger"
 )
 
 const slotLimit = 20

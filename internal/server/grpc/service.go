@@ -3,8 +3,8 @@ package internalgrpc
 import (
 	"context"
 
-	"github.com/leksss/banner-rotator/internal/app"
-	pb "github.com/leksss/banner-rotator/proto/protobuf"
+	"github.com/leksss/banner_rotator/internal/app"
+	pb "github.com/leksss/banner_rotator/proto/protobuf"
 )
 
 type BannerRotatorService struct {

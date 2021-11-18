@@ -7,7 +7,7 @@ import (
 	"os"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/leksss/banner-rotator/internal/infrastructure/config"
+	"github.com/leksss/banner_rotator/internal/infrastructure/config"
 	"github.com/pressly/goose/v3"
 )
 

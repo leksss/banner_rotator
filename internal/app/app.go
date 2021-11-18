@@ -3,10 +3,10 @@ package app
 import (
 	"context"
 
-	"github.com/leksss/banner-rotator/internal/domain/errors"
-	"github.com/leksss/banner-rotator/internal/domain/interfaces"
-	"github.com/leksss/banner-rotator/internal/infrastructure/logger"
-	pb "github.com/leksss/banner-rotator/proto/protobuf"
+	"github.com/leksss/banner_rotator/internal/domain/errors"
+	"github.com/leksss/banner_rotator/internal/domain/interfaces"
+	"github.com/leksss/banner_rotator/internal/infrastructure/logger"
+	pb "github.com/leksss/banner_rotator/proto/protobuf"
 )
 
 type App struct {

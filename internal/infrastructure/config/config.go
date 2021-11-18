@@ -7,9 +7,9 @@ import (
 	"path"
 	"runtime"
 
-	"github.com/leksss/banner-rotator/internal/domain/interfaces"
-	"github.com/leksss/banner-rotator/internal/infrastructure/logger"
-	"github.com/leksss/banner-rotator/internal/server"
+	"github.com/leksss/banner_rotator/internal/domain/interfaces"
+	"github.com/leksss/banner_rotator/internal/infrastructure/logger"
+	"github.com/leksss/banner_rotator/internal/server"
 	"gopkg.in/yaml.v2"
 )
 

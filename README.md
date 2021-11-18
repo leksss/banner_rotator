@@ -1,1 +1,1 @@
-# banner-rotator
+# banner_rotator
