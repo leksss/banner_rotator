@@ -3,6 +3,8 @@ package memorystorage
 import (
 	"context"
 	"sync"
+
+	"github.com/leksss/banner_rotator/internal/domain/entities"
 )
 
 type Storage struct {
@@ -49,6 +51,6 @@ func (s *Storage) GetBannersBySlot(ctx context.Context, slotID uint64) ([]uint64
 	return nil, nil
 }
 
-func (s *Storage) GetSlotCounters(ctx context.Context, slotID, groupID uint64) (map[uint64]uint64, error) {
+func (s *Storage) GetSlotCounters(ctx context.Context, slotID, groupID uint64) ([]*entities.Counter, error) {
 	return nil, nil
 }

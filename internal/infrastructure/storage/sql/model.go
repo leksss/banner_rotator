@@ -1,10 +1,10 @@
 package sqlstorage
 
-type ucb1Db struct {
-	ID       int64 `db:"id"`
-	SlotID   int64 `db:"slot_id"`
-	BannerID int64 `db:"banner_id"`
-	GroupID  int64 `db:"group_id"`
-	HitCnt   int64 `db:"hit_cnt"`
-	ShowCnt  int64 `db:"show_cnt"`
+type ucb1Row struct {
+	ID       uint64 `db:"id"`
+	SlotID   uint64 `db:"slot_id"`
+	BannerID uint64 `db:"banner_id"`
+	GroupID  uint64 `db:"group_id"`
+	HitCnt   uint64 `db:"hit_cnt"`
+	ShowCnt  uint64 `db:"show_cnt"`
 }

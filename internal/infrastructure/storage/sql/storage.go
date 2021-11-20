@@ -8,6 +8,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql" // nolint
 	"github.com/jmoiron/sqlx"
+	"github.com/leksss/banner_rotator/internal/domain/entities"
 	"github.com/leksss/banner_rotator/internal/domain/interfaces"
 	"github.com/leksss/banner_rotator/internal/infrastructure/logger"
 )
@@ -89,7 +90,7 @@ func (s *Storage) incCounter(ctx context.Context, slotID, bannerID, groupID uint
 	}
 	defer rows.Close()
 
-	var ucb1 ucb1Db
+	var row ucb1Row
 	if !rows.Next() {
 		query = `INSERT INTO ucb1 (slot_id, banner_id, group_id, hit_cnt, show_cnt) 
 					VALUES (:slotID, :bannerID, :groupID, :hitCnt, :showCnt)`
@@ -102,8 +103,7 @@ func (s *Storage) incCounter(ctx context.Context, slotID, bannerID, groupID uint
 			params["showCnt"] = 1
 		}
 	} else {
-		err = rows.StructScan(&ucb1)
-		if err != nil {
+		if err = rows.StructScan(&row); err != nil {
 			return err
 		}
 		query = `UPDATE ucb1 SET 
@@ -113,23 +113,23 @@ func (s *Storage) incCounter(ctx context.Context, slotID, bannerID, groupID uint
 						AND banner_id=:bannerID 
 						AND group_id=:groupID`
 		if field == hitField {
-			ucb1.HitCnt++
-			params["hitCnt"] = ucb1.HitCnt
-			params["showCnt"] = ucb1.ShowCnt
+			row.HitCnt++
+			params["hitCnt"] = row.HitCnt
+			params["showCnt"] = row.ShowCnt
 		}
 		if field == showField {
-			ucb1.ShowCnt++
-			params["hitCnt"] = ucb1.HitCnt
-			params["showCnt"] = ucb1.ShowCnt
+			row.ShowCnt++
+			params["hitCnt"] = row.HitCnt
+			params["showCnt"] = row.ShowCnt
 		}
 	}
 	_, err = s.execContext(ctx, query, params)
 	return err
 }
 
-func (s *Storage) GetSlotCounters(ctx context.Context, slotID, groupID uint64) (map[uint64]uint64, error) {
-	query := `SELECT id, banner_id, event_type 
-				FROM statistics 
+func (s *Storage) GetSlotCounters(ctx context.Context, slotID, groupID uint64) ([]*entities.Counter, error) {
+	query := `SELECT id, slot_id, banner_id, group_id, hit_cnt, show_cnt  
+				FROM ucb1 
 				WHERE slot_id=:slotID AND group_id=:groupID 
 				LIMIT :statLimit`
 	arg := map[string]interface{}{
@@ -143,16 +143,22 @@ func (s *Storage) GetSlotCounters(ctx context.Context, slotID, groupID uint64) (
 	}
 	defer rows.Close()
 
-	//var bannerIDs []uint64
-	//var bannerID uint64
-	//for rows.Next() {
-	//	err = rows.StructScan(&bannerID)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	bannerIDs = append(bannerIDs, bannerID)
-	//}
-	return map[uint64]uint64{}, nil
+	var row ucb1Row
+	var counters []*entities.Counter
+	for rows.Next() {
+		err = rows.StructScan(&row)
+		if err != nil {
+			return nil, err
+		}
+		counters = append(counters, &entities.Counter{
+			SlotID:   row.SlotID,
+			BannerID: row.BannerID,
+			GroupID:  row.GroupID,
+			HitCnt:   float64(row.HitCnt),
+			ShowCnt:  float64(row.ShowCnt),
+		})
+	}
+	return counters, nil
 }
 
 func (s *Storage) GetBannersBySlot(ctx context.Context, slotID uint64) ([]uint64, error) {
@@ -167,11 +173,10 @@ func (s *Storage) GetBannersBySlot(ctx context.Context, slotID uint64) ([]uint64
 	}
 	defer rows.Close()
 
-	var bannerIDs []uint64
 	var bannerID uint64
+	var bannerIDs []uint64
 	for rows.Next() {
-		err = rows.StructScan(&bannerID)
-		if err != nil {
+		if err = rows.Scan(&bannerID); err != nil {
 			return nil, err
 		}
 		bannerIDs = append(bannerIDs, bannerID)

@@ -5,6 +5,7 @@ import (
 
 	"github.com/leksss/banner_rotator/internal/domain/errors"
 	"github.com/leksss/banner_rotator/internal/domain/interfaces"
+	"github.com/leksss/banner_rotator/internal/domain/services"
 	"github.com/leksss/banner_rotator/internal/infrastructure/logger"
 	pb "github.com/leksss/banner_rotator/proto/protobuf"
 )
@@ -99,13 +100,17 @@ func (a *App) GetBanner(ctx context.Context, in *pb.GetBannerRequest) (*pb.GetBa
 		return nil, nil
 	}
 
-	_, err = a.storage.GetSlotCounters(ctx, in.SlotID, in.GroupID)
+	counters, err := a.storage.GetSlotCounters(ctx, in.SlotID, in.GroupID)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO считаем UCB1
-	bestBannerID := uint64(0)
+	bestBannerID := services.CalculateBestBanner(a.logger, counters)
+	if bestBannerID == 0 {
+		return &pb.GetBannerResponse{
+			Success: true,
+		}, nil
+	}
 
 	if err := a.storage.IncShow(ctx, in.SlotID, bestBannerID, in.GroupID); err != nil {
 		return &pb.GetBannerResponse{

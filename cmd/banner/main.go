@@ -37,10 +37,10 @@ func main() {
 	}
 
 	flag.Parse()
-	if flag.Arg(0) == "version" {
-		printVersion()
-		return
-	}
+	//if flag.Arg(0) == "version" {
+	//	printVersion()
+	//	return
+	//}
 
 	logg := logger.New(conf.Logger, conf.GetProjectRoot(), conf.IsDebug())
 
