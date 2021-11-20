@@ -12,7 +12,13 @@ import (
 	"github.com/leksss/banner_rotator/internal/infrastructure/logger"
 )
 
-const slotLimit = 20
+const (
+	slotLimit = 20
+	statLimit = 100
+
+	hitField  = "hit_cnt"
+	showField = "show_cnt"
+)
 
 type Storage struct {
 	db   *sqlx.DB
@@ -58,12 +64,99 @@ func (s *Storage) RemoveBanner(ctx context.Context, slotID, bannerID uint64) err
 	return err
 }
 
-func (s *Storage) HitBanner(ctx context.Context, slotID, bannerID, groupID uint64) error {
-	// отправляем событие в очередь, увеличиваем счетчик переходов
-	return nil
+func (s *Storage) IncHit(ctx context.Context, slotID, bannerID, groupID uint64) error {
+	return s.incCounter(ctx, slotID, bannerID, groupID, hitField)
 }
 
-func (s *Storage) GetBanner(ctx context.Context, slotID, groupID uint64) (uint64, error) {
+func (s *Storage) IncShow(ctx context.Context, slotID, bannerID, groupID uint64) error {
+	return s.incCounter(ctx, slotID, bannerID, groupID, showField)
+}
+
+func (s *Storage) incCounter(ctx context.Context, slotID, bannerID, groupID uint64, field string) error {
+	params := map[string]interface{}{
+		"slotID":   slotID,
+		"bannerID": bannerID,
+		"groupID":  groupID,
+	}
+	query := `SELECT id, hit_cnt, show_cnt 
+				FROM ucb1 
+				WHERE slot_id=:slotID 
+					AND banner_id=:bannerID 
+					AND group_id=:groupID`
+	rows, err := s.queryContext(ctx, query, params)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var ucb1 *ucb1Db
+	err = rows.StructScan(&ucb1)
+	if err != nil {
+		return err
+	}
+
+	if ucb1 == nil {
+		query = `INSERT INTO ucb1 (slot_id, banner_id, group_id, hit_cnt, show_cnt) 
+					VALUES (:slotID, :bannerID, :groupID, :hitCnt, :showCnt)`
+		if field == hitField {
+			params["hitCnt"] = 1
+			params["showCnt"] = 0
+		}
+		if field == showField {
+			params["hitCnt"] = 0
+			params["showCnt"] = 1
+		}
+	} else {
+		query = `UPDATE ucb1 SET 
+						hit_cnt=:hitCnt, 
+						show_cnt=:showCnt 
+					WHERE slot_id=:slotID 
+						AND banner_id=:bannerID 
+						AND group_id=:groupID`
+		if field == hitField {
+			ucb1.hitCnt++
+			params["hitCnt"] = ucb1.hitCnt
+			params["showCnt"] = ucb1.showCnt
+		}
+		if field == showField {
+			ucb1.showCnt++
+			params["hitCnt"] = ucb1.hitCnt
+			params["showCnt"] = ucb1.showCnt
+		}
+	}
+	_, err = s.execContext(ctx, query, params)
+	return err
+}
+
+func (s *Storage) GetSlotCounters(ctx context.Context, slotID, groupID uint64) (map[uint64]uint64, error) {
+	query := `SELECT id, banner_id, event_type 
+				FROM statistics 
+				WHERE slot_id=:slotID AND group_id=:groupID 
+				LIMIT :statLimit`
+	arg := map[string]interface{}{
+		"slotID":    slotID,
+		"groupID":   groupID,
+		"statLimit": statLimit,
+	}
+	rows, err := s.queryContext(ctx, query, arg)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	//var bannerIDs []uint64
+	//var bannerID uint64
+	//for rows.Next() {
+	//	err = rows.StructScan(&bannerID)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	bannerIDs = append(bannerIDs, bannerID)
+	//}
+	return map[uint64]uint64{}, nil
+}
+
+func (s *Storage) GetBannersBySlot(ctx context.Context, slotID uint64) ([]uint64, error) {
 	query := `SELECT banner_id FROM slot2banner WHERE slot_id=:slotID LIMIT :slotLimit`
 	arg := map[string]interface{}{
 		"slotID":    slotID,
@@ -71,25 +164,20 @@ func (s *Storage) GetBanner(ctx context.Context, slotID, groupID uint64) (uint64
 	}
 	rows, err := s.queryContext(ctx, query, arg)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	defer rows.Close()
 
-	var banners []uint64
+	var bannerIDs []uint64
 	var bannerID uint64
 	for rows.Next() {
-		err = rows.Scan(&bannerID)
+		err = rows.StructScan(&bannerID)
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
-		banners = append(banners, bannerID)
+		bannerIDs = append(bannerIDs, bannerID)
 	}
-
-	if len(banners) == 0 {
-		return 0, nil
-	}
-
-	return banners[0], nil
+	return bannerIDs, nil
 }
 
 func (s *Storage) execContext(ctx context.Context, query string, arg interface{}) (sql.Result, error) {

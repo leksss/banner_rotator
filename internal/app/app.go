@@ -69,13 +69,14 @@ func (a *App) HitBanner(ctx context.Context, in *pb.HitBannerRequest) (*pb.HitBa
 		}, nil
 	}
 
-	err := a.storage.HitBanner(ctx, in.SlotID, in.BannerID, in.GroupID)
-	if err != nil {
+	if err := a.storage.IncHit(ctx, in.SlotID, in.BannerID, in.GroupID); err != nil {
 		return &pb.HitBannerResponse{
 			Success: false,
 			Errors:  toProtoError([]*pb.Error{}, err),
 		}, nil
 	}
+
+	//TODO отправляем событие хита в очередь для аналитической системы
 
 	return &pb.HitBannerResponse{
 		Success: true,
@@ -90,7 +91,28 @@ func (a *App) GetBanner(ctx context.Context, in *pb.GetBannerRequest) (*pb.GetBa
 		}, nil
 	}
 
-	bannerID, err := a.storage.GetBanner(ctx, in.SlotID, in.GroupID)
+	bannerIDs, err := a.storage.GetBannersBySlot(ctx, in.SlotID)
+	if err != nil {
+		return nil, err
+	}
+	if len(bannerIDs) == 0 {
+		return nil, nil
+	}
+
+	_, err = a.storage.GetSlotCounters(ctx, in.SlotID, in.GroupID)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO считаем UCB1
+
+	bannerID := uint64(0)
+	if err := a.storage.IncShow(ctx, in.SlotID, bannerID, in.GroupID); err != nil {
+		return nil, err
+	}
+
+	// TODO отправляем событие показа в очередь для аналитической системы
+
 	if err != nil {
 		return &pb.GetBannerResponse{
 			Success: false,

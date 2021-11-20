@@ -37,7 +37,11 @@ func (s *Storage) RemoveBanner(ctx context.Context, slotID, bannerID uint64) err
 	return nil
 }
 
-func (s *Storage) HitBanner(ctx context.Context, slotID, bannerID, groupID uint64) error {
+func (s *Storage) IncHit(ctx context.Context, slotID, bannerID, groupID uint64) error {
+	return nil
+}
+
+func (s *Storage) IncShow(ctx context.Context, slotID, bannerID, groupID uint64) error {
 	return nil
 }
 

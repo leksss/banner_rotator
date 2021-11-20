@@ -40,15 +40,16 @@ CREATE TABLE IF NOT EXISTS `slot2banner`
   COLLATE = utf8_general_ci;
 -- +goose StatementEnd
 -- +goose StatementBegin
-CREATE TABLE IF NOT EXISTS `statistics`
+CREATE TABLE IF NOT EXISTS `ucb1`
 (
-    `id`           INT(11)    NOT NULL AUTO_INCREMENT,
-    `slot_id`      INT(11)    NOT NULL DEFAULT 0,
-    `banner_id`    INT(11)    NOT NULL DEFAULT 0,
-    `group_id`     INT(11)    NOT NULL DEFAULT 0,
-    `event_type`   TINYINT(1) NOT NULL DEFAULT 0,
-    `processed_at` TIMESTAMP  NULL     DEFAULT NULL,
-    PRIMARY KEY (`id`)
+    `id`        INT(11) NOT NULL AUTO_INCREMENT,
+    `slot_id`   INT(11) NOT NULL DEFAULT 0,
+    `banner_id` INT(11) NOT NULL DEFAULT 0,
+    `group_id`  INT(11) NOT NULL DEFAULT 0,
+    `hit_cnt`   INT(11) NOT NULL DEFAULT 0,
+    `show_cnt`  INT(11) NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY (`slot_id`, `banner_id`, `group_id`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8
   COLLATE = utf8_general_ci;
@@ -87,5 +88,5 @@ DROP TABLE `group`;
 DROP TABLE `slot2banner`;
 -- +goose StatementEnd
 -- +goose StatementBegin
-DROP TABLE `statistics`;
+DROP TABLE `ucb1`;
 -- +goose StatementEnd
