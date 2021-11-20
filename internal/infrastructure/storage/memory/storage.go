@@ -45,9 +45,10 @@ func (s *Storage) IncShow(ctx context.Context, slotID, bannerID, groupID uint64)
 	return nil
 }
 
-func (s *Storage) GetBanner(ctx context.Context, slotID, groupID uint64) (uint64, error) {
-	if len(s.banners) == 0 {
-		return 0, nil
-	}
-	return s.banners[0], nil
+func (s *Storage) GetBannersBySlot(ctx context.Context, slotID uint64) ([]uint64, error) {
+	return nil, nil
+}
+
+func (s *Storage) GetSlotCounters(ctx context.Context, slotID, groupID uint64) (map[uint64]uint64, error) {
+	return nil, nil
 }

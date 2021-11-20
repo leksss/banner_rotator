@@ -78,7 +78,7 @@ func (s *Storage) incCounter(ctx context.Context, slotID, bannerID, groupID uint
 		"bannerID": bannerID,
 		"groupID":  groupID,
 	}
-	query := `SELECT id, hit_cnt, show_cnt 
+	query := `SELECT id, slot_id, banner_id, group_id, hit_cnt, show_cnt 
 				FROM ucb1 
 				WHERE slot_id=:slotID 
 					AND banner_id=:bannerID 
@@ -89,13 +89,8 @@ func (s *Storage) incCounter(ctx context.Context, slotID, bannerID, groupID uint
 	}
 	defer rows.Close()
 
-	var ucb1 *ucb1Db
-	err = rows.StructScan(&ucb1)
-	if err != nil {
-		return err
-	}
-
-	if ucb1 == nil {
+	var ucb1 ucb1Db
+	if !rows.Next() {
 		query = `INSERT INTO ucb1 (slot_id, banner_id, group_id, hit_cnt, show_cnt) 
 					VALUES (:slotID, :bannerID, :groupID, :hitCnt, :showCnt)`
 		if field == hitField {
@@ -107,6 +102,10 @@ func (s *Storage) incCounter(ctx context.Context, slotID, bannerID, groupID uint
 			params["showCnt"] = 1
 		}
 	} else {
+		err = rows.StructScan(&ucb1)
+		if err != nil {
+			return err
+		}
 		query = `UPDATE ucb1 SET 
 						hit_cnt=:hitCnt, 
 						show_cnt=:showCnt 
@@ -114,14 +113,14 @@ func (s *Storage) incCounter(ctx context.Context, slotID, bannerID, groupID uint
 						AND banner_id=:bannerID 
 						AND group_id=:groupID`
 		if field == hitField {
-			ucb1.hitCnt++
-			params["hitCnt"] = ucb1.hitCnt
-			params["showCnt"] = ucb1.showCnt
+			ucb1.HitCnt++
+			params["hitCnt"] = ucb1.HitCnt
+			params["showCnt"] = ucb1.ShowCnt
 		}
 		if field == showField {
-			ucb1.showCnt++
-			params["hitCnt"] = ucb1.hitCnt
-			params["showCnt"] = ucb1.showCnt
+			ucb1.ShowCnt++
+			params["hitCnt"] = ucb1.HitCnt
+			params["showCnt"] = ucb1.ShowCnt
 		}
 	}
 	_, err = s.execContext(ctx, query, params)
