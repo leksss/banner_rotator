@@ -105,24 +105,20 @@ func (a *App) GetBanner(ctx context.Context, in *pb.GetBannerRequest) (*pb.GetBa
 	}
 
 	// TODO считаем UCB1
+	bestBannerID := uint64(0)
 
-	bannerID := uint64(0)
-	if err := a.storage.IncShow(ctx, in.SlotID, bannerID, in.GroupID); err != nil {
-		return nil, err
-	}
-
-	// TODO отправляем событие показа в очередь для аналитической системы
-
-	if err != nil {
+	if err := a.storage.IncShow(ctx, in.SlotID, bestBannerID, in.GroupID); err != nil {
 		return &pb.GetBannerResponse{
 			Success: false,
 			Errors:  toProtoError([]*pb.Error{}, err),
 		}, nil
 	}
 
+	// TODO отправляем событие показа в очередь для аналитической системы
+
 	return &pb.GetBannerResponse{
 		Success:  true,
-		BannerID: bannerID,
+		BannerID: bestBannerID,
 	}, nil
 }
 
