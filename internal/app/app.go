@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 
+	"github.com/leksss/banner_rotator/internal/domain/entities"
 	"github.com/leksss/banner_rotator/internal/domain/errors"
 	"github.com/leksss/banner_rotator/internal/domain/interfaces"
 	"github.com/leksss/banner_rotator/internal/domain/services"
@@ -89,29 +90,31 @@ func (a *App) GetBanner(ctx context.Context, in *pb.GetBannerRequest) (*pb.GetBa
 		return getBannerErrorResponse(errors.ErrInvalidRequestSlotAndGroupAreRequired)
 	}
 
-	bannerIDs, err := a.storage.GetBannersBySlot(ctx, in.SlotID)
-	if err != nil {
-		return nil, err
+	bannerIDsCh, banErrCh := a.goGetBannersBySlot(ctx, in.SlotID)
+	countersCh, cntErrCh := a.goGetSlotCounters(ctx, in.SlotID, in.GroupID)
+	if err := <-banErrCh; err != nil {
+		return getBannerErrorResponse(err)
 	}
+	if err := <-cntErrCh; err != nil {
+		return getBannerErrorResponse(err)
+	}
+
+	bannerIDs := <-bannerIDsCh
 	if len(bannerIDs) == 0 {
 		return getBannerErrorResponse(errors.ErrNoAvailableBannersInSlot)
 	}
-
-	counters, err := a.storage.GetSlotCounters(ctx, in.SlotID, in.GroupID)
-	if err != nil {
-		return getBannerErrorResponse(err)
-	}
+	counters := <-countersCh
 
 	bestBannerID := services.CalculateBestBanner(a.logger, bannerIDs, counters)
 	if bestBannerID == 0 {
 		return getBannerErrorResponse(errors.ErrBannerNotFound)
 	}
 
-	if err := a.storage.IncrementShow(ctx, in.SlotID, bestBannerID, in.GroupID); err != nil {
+	incErrCh := a.goIncrementShow(ctx, in.SlotID, bestBannerID, in.GroupID)
+	// TODO отправляем событие показа в очередь для аналитической системы
+	if err := <-incErrCh; err != nil {
 		return getBannerErrorResponse(err)
 	}
-
-	// TODO отправляем событие показа в очередь для аналитической системы
 
 	return &pb.GetBannerResponse{
 		Success:  true,
@@ -131,4 +134,35 @@ func getBannerErrorResponse(err error) (*pb.GetBannerResponse, error) {
 		Success: false,
 		Errors:  toProtoError([]*pb.Error{}, err),
 	}, nil
+}
+
+func (a *App) goGetBannersBySlot(ctx context.Context, slotID uint64) (<-chan []uint64, <-chan error) {
+	resCh := make(chan []uint64, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		bannerIDs, err := a.storage.GetBannersBySlot(ctx, slotID)
+		errCh <- err
+		resCh <- bannerIDs
+	}()
+	return resCh, errCh
+}
+
+func (a *App) goGetSlotCounters(ctx context.Context, slotID, groupID uint64) (<-chan map[uint64]*entities.Counter, <-chan error) {
+	resCh := make(chan map[uint64]*entities.Counter, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		counters, err := a.storage.GetSlotCounters(ctx, slotID, groupID)
+		errCh <- err
+		resCh <- counters
+	}()
+	return resCh, errCh
+}
+
+func (a *App) goIncrementShow(ctx context.Context, slotID, bannerID, groupID uint64) <-chan error {
+	errCh := make(chan error, 1)
+	go func() {
+		err := a.storage.IncrementShow(ctx, slotID, bannerID, groupID)
+		errCh <- err
+	}()
+	return errCh
 }
