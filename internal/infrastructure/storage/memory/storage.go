@@ -39,11 +39,11 @@ func (s *Storage) RemoveBanner(ctx context.Context, slotID, bannerID uint64) err
 	return nil
 }
 
-func (s *Storage) IncHit(ctx context.Context, slotID, bannerID, groupID uint64) error {
+func (s *Storage) IncrementHit(ctx context.Context, slotID, bannerID, groupID uint64) error {
 	return nil
 }
 
-func (s *Storage) IncShow(ctx context.Context, slotID, bannerID, groupID uint64) error {
+func (s *Storage) IncrementShow(ctx context.Context, slotID, bannerID, groupID uint64) error {
 	return nil
 }
 
@@ -51,6 +51,6 @@ func (s *Storage) GetBannersBySlot(ctx context.Context, slotID uint64) ([]uint64
 	return nil, nil
 }
 
-func (s *Storage) GetSlotCounters(ctx context.Context, slotID, groupID uint64) ([]*entities.Counter, error) {
+func (s *Storage) GetSlotCounters(ctx context.Context, slotID, groupID uint64) (map[uint64]*entities.Counter, error) {
 	return nil, nil
 }

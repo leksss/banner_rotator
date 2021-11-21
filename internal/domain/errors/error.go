@@ -1,13 +1,16 @@
 package errors
 
-type EventError string
+type BannerError string
 
 var (
-	ErrInvalidRequestSlotAndBannerAreRequired         = EventError("Invalid request. slotID and bannerID are required")
-	ErrInvalidRequestSlotAndBannerAndGroupAreRequired = EventError("Invalid request. slotID, bannerID and groupID are required")
-	ErrInvalidRequestSlotAndGroupAreRequired          = EventError("Invalid request. slotID and groupID are required")
+	ErrInvalidRequestSlotAndBannerAreRequired         = BannerError("Invalid request. slotID and bannerID are required")
+	ErrInvalidRequestSlotAndBannerAndGroupAreRequired = BannerError("Invalid request. slotID, bannerID and groupID are required")
+	ErrInvalidRequestSlotAndGroupAreRequired          = BannerError("Invalid request. slotID and groupID are required")
+
+	ErrBannerNotFound           = BannerError("Banner not found")
+	ErrNoAvailableBannersInSlot = BannerError("No available banners in slot")
 )
 
-func (ee EventError) Error() string {
+func (ee BannerError) Error() string {
 	return string(ee)
 }

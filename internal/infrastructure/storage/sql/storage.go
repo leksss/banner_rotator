@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql" // nolint
 	"github.com/jmoiron/sqlx"
@@ -65,15 +66,19 @@ func (s *Storage) RemoveBanner(ctx context.Context, slotID, bannerID uint64) err
 	return err
 }
 
-func (s *Storage) IncHit(ctx context.Context, slotID, bannerID, groupID uint64) error {
-	return s.incCounter(ctx, slotID, bannerID, groupID, hitField)
+func (s *Storage) IncrementHit(ctx context.Context, slotID, bannerID, groupID uint64) error {
+	return s.incrementCounter(ctx, slotID, bannerID, groupID, hitField)
 }
 
-func (s *Storage) IncShow(ctx context.Context, slotID, bannerID, groupID uint64) error {
-	return s.incCounter(ctx, slotID, bannerID, groupID, showField)
+func (s *Storage) IncrementShow(ctx context.Context, slotID, bannerID, groupID uint64) error {
+	return s.incrementCounter(ctx, slotID, bannerID, groupID, showField)
 }
 
-func (s *Storage) incCounter(ctx context.Context, slotID, bannerID, groupID uint64, field string) error {
+func (s *Storage) incrementCounter(ctx context.Context, slotID, bannerID, groupID uint64, field string) error {
+	if slotID == 0 || bannerID == 0 || groupID == 0 {
+		s.log.Error("Invalid params: slotID, bannerID, groupID")
+		return nil
+	}
 	params := map[string]interface{}{
 		"slotID":   slotID,
 		"bannerID": bannerID,
@@ -127,7 +132,7 @@ func (s *Storage) incCounter(ctx context.Context, slotID, bannerID, groupID uint
 	return err
 }
 
-func (s *Storage) GetSlotCounters(ctx context.Context, slotID, groupID uint64) ([]*entities.Counter, error) {
+func (s *Storage) GetSlotCounters(ctx context.Context, slotID, groupID uint64) (map[uint64]*entities.Counter, error) {
 	query := `SELECT id, slot_id, banner_id, group_id, hit_cnt, show_cnt  
 				FROM ucb1 
 				WHERE slot_id=:slotID AND group_id=:groupID 
@@ -144,19 +149,19 @@ func (s *Storage) GetSlotCounters(ctx context.Context, slotID, groupID uint64) (
 	defer rows.Close()
 
 	var row ucb1Row
-	var counters []*entities.Counter
+	counters := make(map[uint64]*entities.Counter)
 	for rows.Next() {
 		err = rows.StructScan(&row)
 		if err != nil {
 			return nil, err
 		}
-		counters = append(counters, &entities.Counter{
+		counters[row.BannerID] = &entities.Counter{
 			SlotID:   row.SlotID,
 			BannerID: row.BannerID,
 			GroupID:  row.GroupID,
 			HitCnt:   float64(row.HitCnt),
 			ShowCnt:  float64(row.ShowCnt),
-		})
+		}
 	}
 	return counters, nil
 }
@@ -197,6 +202,8 @@ func (s *Storage) queryContext(ctx context.Context, query string, arg interface{
 }
 
 func (s *Storage) logQuery(sql string, arg interface{}) {
-	byteArg, _ := json.MarshalIndent(arg, "", "  ")
-	s.log.Info(fmt.Sprintf("%s %s", sql, string(byteArg)))
+	sql = strings.ReplaceAll(sql, "\n", "")
+	sql = strings.ReplaceAll(sql, "\t", "")
+	byteArg, _ := json.Marshal(arg)
+	s.log.Info(fmt.Sprintf("query: %s params: %s", fmt.Sprintf("%q", sql), string(byteArg)))
 }

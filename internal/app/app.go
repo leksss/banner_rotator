@@ -70,7 +70,7 @@ func (a *App) HitBanner(ctx context.Context, in *pb.HitBannerRequest) (*pb.HitBa
 		}, nil
 	}
 
-	if err := a.storage.IncHit(ctx, in.SlotID, in.BannerID, in.GroupID); err != nil {
+	if err := a.storage.IncrementHit(ctx, in.SlotID, in.BannerID, in.GroupID); err != nil {
 		return &pb.HitBannerResponse{
 			Success: false,
 			Errors:  toProtoError([]*pb.Error{}, err),
@@ -97,7 +97,10 @@ func (a *App) GetBanner(ctx context.Context, in *pb.GetBannerRequest) (*pb.GetBa
 		return nil, err
 	}
 	if len(bannerIDs) == 0 {
-		return nil, nil
+		return &pb.GetBannerResponse{
+			Success: false,
+			Errors:  toProtoError([]*pb.Error{}, errors.ErrNoAvailableBannersInSlot),
+		}, nil
 	}
 
 	counters, err := a.storage.GetSlotCounters(ctx, in.SlotID, in.GroupID)
@@ -105,14 +108,15 @@ func (a *App) GetBanner(ctx context.Context, in *pb.GetBannerRequest) (*pb.GetBa
 		return nil, err
 	}
 
-	bestBannerID := services.CalculateBestBanner(a.logger, counters)
+	bestBannerID := services.CalculateBestBanner(a.logger, bannerIDs, counters)
 	if bestBannerID == 0 {
 		return &pb.GetBannerResponse{
-			Success: true,
+			Success: false,
+			Errors:  toProtoError([]*pb.Error{}, errors.ErrBannerNotFound),
 		}, nil
 	}
 
-	if err := a.storage.IncShow(ctx, in.SlotID, bestBannerID, in.GroupID); err != nil {
+	if err := a.storage.IncrementShow(ctx, in.SlotID, bestBannerID, in.GroupID); err != nil {
 		return &pb.GetBannerResponse{
 			Success: false,
 			Errors:  toProtoError([]*pb.Error{}, err),
