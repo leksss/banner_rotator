@@ -77,7 +77,7 @@ func (a *App) HitBanner(ctx context.Context, in *pb.HitBannerRequest) (*pb.HitBa
 		}, nil
 	}
 
-	//TODO отправляем событие хита в очередь для аналитической системы
+	// TODO отправляем событие хита в очередь для аналитической системы
 
 	return &pb.HitBannerResponse{
 		Success: true,
@@ -86,10 +86,7 @@ func (a *App) HitBanner(ctx context.Context, in *pb.HitBannerRequest) (*pb.HitBa
 
 func (a *App) GetBanner(ctx context.Context, in *pb.GetBannerRequest) (*pb.GetBannerResponse, error) {
 	if in.SlotID == 0 || in.GroupID == 0 {
-		return &pb.GetBannerResponse{
-			Success: false,
-			Errors:  toProtoError([]*pb.Error{}, errors.ErrInvalidRequestSlotAndGroupAreRequired),
-		}, nil
+		return getBannerErrorResponse(errors.ErrInvalidRequestSlotAndGroupAreRequired)
 	}
 
 	bannerIDs, err := a.storage.GetBannersBySlot(ctx, in.SlotID)
@@ -97,30 +94,21 @@ func (a *App) GetBanner(ctx context.Context, in *pb.GetBannerRequest) (*pb.GetBa
 		return nil, err
 	}
 	if len(bannerIDs) == 0 {
-		return &pb.GetBannerResponse{
-			Success: false,
-			Errors:  toProtoError([]*pb.Error{}, errors.ErrNoAvailableBannersInSlot),
-		}, nil
+		return getBannerErrorResponse(errors.ErrNoAvailableBannersInSlot)
 	}
 
 	counters, err := a.storage.GetSlotCounters(ctx, in.SlotID, in.GroupID)
 	if err != nil {
-		return nil, err
+		return getBannerErrorResponse(err)
 	}
 
 	bestBannerID := services.CalculateBestBanner(a.logger, bannerIDs, counters)
 	if bestBannerID == 0 {
-		return &pb.GetBannerResponse{
-			Success: false,
-			Errors:  toProtoError([]*pb.Error{}, errors.ErrBannerNotFound),
-		}, nil
+		return getBannerErrorResponse(errors.ErrBannerNotFound)
 	}
 
 	if err := a.storage.IncrementShow(ctx, in.SlotID, bestBannerID, in.GroupID); err != nil {
-		return &pb.GetBannerResponse{
-			Success: false,
-			Errors:  toProtoError([]*pb.Error{}, err),
-		}, nil
+		return getBannerErrorResponse(err)
 	}
 
 	// TODO отправляем событие показа в очередь для аналитической системы
@@ -136,4 +124,11 @@ func toProtoError(errs []*pb.Error, err error) []*pb.Error {
 		Code: "banner",
 		Msg:  err.Error(),
 	})
+}
+
+func getBannerErrorResponse(err error) (*pb.GetBannerResponse, error) {
+	return &pb.GetBannerResponse{
+		Success: false,
+		Errors:  toProtoError([]*pb.Error{}, err),
+	}, nil
 }
