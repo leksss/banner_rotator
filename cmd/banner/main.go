@@ -13,6 +13,7 @@ import (
 	"github.com/leksss/banner_rotator/internal/app"
 	"github.com/leksss/banner_rotator/internal/domain/interfaces"
 	"github.com/leksss/banner_rotator/internal/infrastructure/config"
+	"github.com/leksss/banner_rotator/internal/infrastructure/eventbus"
 	"github.com/leksss/banner_rotator/internal/infrastructure/logger"
 	memory "github.com/leksss/banner_rotator/internal/infrastructure/storage/memory"
 	mysql "github.com/leksss/banner_rotator/internal/infrastructure/storage/sql"
@@ -50,7 +51,13 @@ func main() {
 	storage := createStorageInstance(ctx, conf, logg)
 	defer storage.Close(ctx)
 
-	calendar := app.New(logg, storage)
+	bus := eventbus.New(conf.Kafka)
+	if err := bus.Connect(ctx); err != nil {
+		logg.Error(fmt.Sprintf("Connect to event bus failed: %s", err.Error()))
+	}
+	defer bus.Close(ctx)
+
+	calendar := app.New(logg, storage, bus)
 	server := grpc.NewServer(logg, calendar, conf)
 
 	errs := make(chan error)

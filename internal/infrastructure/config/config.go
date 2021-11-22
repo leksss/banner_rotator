@@ -8,6 +8,7 @@ import (
 	"runtime"
 
 	"github.com/leksss/banner_rotator/internal/domain/interfaces"
+	"github.com/leksss/banner_rotator/internal/infrastructure/eventbus"
 	"github.com/leksss/banner_rotator/internal/infrastructure/logger"
 	"github.com/leksss/banner_rotator/internal/server"
 	"gopkg.in/yaml.v2"
@@ -28,6 +29,7 @@ type Config struct {
 	GRPCAddr server.Config           `yaml:"grpc"`
 	Logger   logger.LoggConf         `yaml:"logger"`
 	Database interfaces.DatabaseConf `yaml:"database"`
+	Kafka    eventbus.KafkaConf      `yaml:"kafka"`
 }
 
 func NewConfig(configFile string) Config {

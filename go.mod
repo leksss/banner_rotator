@@ -3,6 +3,7 @@ module github.com/leksss/banner_rotator
 go 1.16
 
 require (
+	github.com/Shopify/sarama v1.30.0
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.6.0

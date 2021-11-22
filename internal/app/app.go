@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"time"
 
 	"github.com/leksss/banner_rotator/internal/domain/entities"
 	"github.com/leksss/banner_rotator/internal/domain/errors"
@@ -14,12 +15,14 @@ import (
 type App struct {
 	logger  logger.Log
 	storage interfaces.Storage
+	bus     interfaces.EventBus
 }
 
-func New(logger logger.Log, storage interfaces.Storage) *App {
+func New(logger logger.Log, storage interfaces.Storage, bus interfaces.EventBus) *App {
 	return &App{
 		logger:  logger,
 		storage: storage,
+		bus:     bus,
 	}
 }
 
@@ -71,14 +74,21 @@ func (a *App) HitBanner(ctx context.Context, in *pb.HitBannerRequest) (*pb.HitBa
 		}, nil
 	}
 
-	if err := a.storage.IncrementHit(ctx, in.SlotID, in.BannerID, in.GroupID); err != nil {
+	incErrCh := a.goIncrementCounter(ctx, in.SlotID, in.BannerID, in.GroupID, true)
+	if err := <-incErrCh; err != nil {
 		return &pb.HitBannerResponse{
 			Success: false,
 			Errors:  toProtoError([]*pb.Error{}, err),
 		}, nil
 	}
 
-	// TODO отправляем событие хита в очередь для аналитической системы
+	busErrCh := a.goAddShowEvent(ctx, in.SlotID, in.BannerID, in.GroupID, entities.EventTypeHit)
+	if err := <-busErrCh; err != nil {
+		return &pb.HitBannerResponse{
+			Success: false,
+			Errors:  toProtoError([]*pb.Error{}, err),
+		}, nil
+	}
 
 	return &pb.HitBannerResponse{
 		Success: true,
@@ -110,9 +120,12 @@ func (a *App) GetBanner(ctx context.Context, in *pb.GetBannerRequest) (*pb.GetBa
 		return getBannerErrorResponse(errors.ErrBannerNotFound)
 	}
 
-	incErrCh := a.goIncrementShow(ctx, in.SlotID, bestBannerID, in.GroupID)
-	// TODO отправляем событие показа в очередь для аналитической системы
+	incErrCh := a.goIncrementCounter(ctx, in.SlotID, bestBannerID, in.GroupID, false)
+	busErrCh := a.goAddShowEvent(ctx, in.SlotID, bestBannerID, in.GroupID, entities.EventTypeShow)
 	if err := <-incErrCh; err != nil {
+		return getBannerErrorResponse(err)
+	}
+	if err := <-busErrCh; err != nil {
 		return getBannerErrorResponse(err)
 	}
 
@@ -158,10 +171,31 @@ func (a *App) goGetSlotCounters(ctx context.Context, slotID, groupID uint64) (<-
 	return resCh, errCh
 }
 
-func (a *App) goIncrementShow(ctx context.Context, slotID, bannerID, groupID uint64) <-chan error {
+func (a *App) goIncrementCounter(ctx context.Context, slotID, bannerID, groupID uint64, isHit bool) <-chan error {
 	errCh := make(chan error, 1)
 	go func() {
-		err := a.storage.IncrementShow(ctx, slotID, bannerID, groupID)
+		var err error
+		if isHit {
+			err = a.storage.IncrementHit(ctx, slotID, bannerID, groupID)
+		} else {
+			err = a.storage.IncrementShow(ctx, slotID, bannerID, groupID)
+		}
+		errCh <- err
+	}()
+	return errCh
+}
+
+func (a *App) goAddShowEvent(ctx context.Context, slotID, bannerID, groupID, eventType uint64) <-chan error {
+	errCh := make(chan error, 1)
+	go func() {
+		stat := entities.EventStat{
+			EventType: eventType,
+			SlotID:    slotID,
+			BannerID:  bannerID,
+			GroupID:   groupID,
+			CreatedAt: time.Now(),
+		}
+		err := a.bus.AddEvent(ctx, stat)
 		errCh <- err
 	}()
 	return errCh
