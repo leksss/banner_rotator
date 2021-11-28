@@ -59,7 +59,7 @@ func TestUCB1PopularBanner(t *testing.T) {
 	counters := entities.BannerCounterMap{
 		1: {HitCnt: 30, ShowCnt: 100},
 		2: {HitCnt: 0, ShowCnt: 100},
-		3: {HitCnt: 50, ShowCnt: 100},
+		3: {HitCnt: 50, ShowCnt: 100}, // expected
 		4: {HitCnt: 20, ShowCnt: 100},
 		5: {HitCnt: 10, ShowCnt: 100},
 	}
