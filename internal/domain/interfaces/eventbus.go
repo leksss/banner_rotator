@@ -7,7 +7,5 @@ import (
 )
 
 type EventBus interface {
-	Connect(ctx context.Context) error
-	Close(ctx context.Context) error
 	AddEvent(ctx context.Context, stat entities.EventStat) error
 }

@@ -7,42 +7,21 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/leksss/banner_rotator/internal/domain/entities"
+	"github.com/leksss/banner_rotator/internal/infrastructure/logger"
 )
 
-type KafkaConf struct {
-	Host  string
-	Port  string
-	Topic string
-}
-
 type KafkaEventBus struct {
-	conn   sarama.SyncProducer
-	config KafkaConf
+	conn  sarama.SyncProducer
+	topic string
+	log   logger.Log
 }
 
-func New(config KafkaConf) *KafkaEventBus {
+func New(conn sarama.SyncProducer, topic string, log logger.Log) *KafkaEventBus {
 	return &KafkaEventBus{
-		config: config,
+		conn:  conn,
+		topic: topic,
+		log:   log,
 	}
-}
-
-func (k *KafkaEventBus) Connect(ctx context.Context) error {
-	config := sarama.NewConfig()
-	config.Producer.Return.Successes = true
-	config.Producer.RequiredAcks = sarama.WaitForAll
-	config.Producer.Retry.Max = 5
-
-	dsn := fmt.Sprintf("%s:%s", k.config.Host, k.config.Port)
-	conn, err := sarama.NewSyncProducer([]string{dsn}, config)
-	if err != nil {
-		return err
-	}
-	k.conn = conn
-	return nil
-}
-
-func (k *KafkaEventBus) Close(ctx context.Context) error {
-	return k.conn.Close()
 }
 
 func (k *KafkaEventBus) AddEvent(ctx context.Context, stat entities.EventStat) error {
@@ -51,12 +30,19 @@ func (k *KafkaEventBus) AddEvent(ctx context.Context, stat entities.EventStat) e
 		return err
 	}
 	msg := &sarama.ProducerMessage{
-		Topic: k.config.Topic,
+		Topic: k.topic,
 		Value: sarama.StringEncoder(statJson),
 	}
 	_, _, err = k.conn.SendMessage(msg)
 	if err != nil {
 		return err
 	}
+
+	k.logEvent(msg)
 	return nil
+}
+
+func (k *KafkaEventBus) logEvent(msg *sarama.ProducerMessage) {
+	byteArg, _ := json.Marshal(msg)
+	k.log.Info(fmt.Sprintf("kafka event: %s", string(byteArg)))
 }

@@ -10,7 +10,6 @@ import (
 	_ "github.com/go-sql-driver/mysql" // nolint
 	"github.com/jmoiron/sqlx"
 	"github.com/leksss/banner_rotator/internal/domain/entities"
-	"github.com/leksss/banner_rotator/internal/domain/interfaces"
 	"github.com/leksss/banner_rotator/internal/infrastructure/logger"
 )
 
@@ -23,33 +22,15 @@ const (
 )
 
 type Storage struct {
-	db   *sqlx.DB
-	conf interfaces.DatabaseConf
-	log  logger.Log
+	db  *sqlx.DB
+	log logger.Log
 }
 
-func New(conf interfaces.DatabaseConf, log logger.Log) *Storage {
+func New(db *sqlx.DB, log logger.Log) *Storage {
 	return &Storage{
-		conf: conf,
-		log:  log,
+		log: log,
+		db:  db,
 	}
-}
-
-func (s *Storage) Connect(ctx context.Context) error {
-	dsn := fmt.Sprintf("%s:%s@(%s:3306)/%s?parseTime=true", s.conf.User, s.conf.Password, s.conf.Host, s.conf.Name)
-	db, err := sqlx.ConnectContext(ctx, "mysql", dsn)
-	if err != nil {
-		return err
-	}
-	s.db = db
-	return nil
-}
-
-func (s *Storage) Close(ctx context.Context) error {
-	if err := s.db.Close(); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (s *Storage) AddBanner(ctx context.Context, slotID, bannerID uint64) error {
@@ -132,7 +113,7 @@ func (s *Storage) incrementCounter(ctx context.Context, slotID, bannerID, groupI
 	return err
 }
 
-func (s *Storage) GetSlotCounters(ctx context.Context, slotID, groupID uint64) (map[uint64]*entities.Counter, error) {
+func (s *Storage) GetSlotCounters(ctx context.Context, slotID, groupID uint64) (entities.BannerCounterMap, error) {
 	query := `SELECT id, slot_id, banner_id, group_id, hit_cnt, show_cnt  
 				FROM ucb1 
 				WHERE slot_id=:slotID AND group_id=:groupID 
@@ -149,13 +130,13 @@ func (s *Storage) GetSlotCounters(ctx context.Context, slotID, groupID uint64) (
 	defer rows.Close()
 
 	var row ucb1Row
-	counters := make(map[uint64]*entities.Counter)
+	counters := make(entities.BannerCounterMap)
 	for rows.Next() {
 		err = rows.StructScan(&row)
 		if err != nil {
 			return nil, err
 		}
-		counters[row.BannerID] = &entities.Counter{
+		counters[entities.BannerID(row.BannerID)] = &entities.Counter{
 			SlotID:   row.SlotID,
 			BannerID: row.BannerID,
 			GroupID:  row.GroupID,
@@ -166,7 +147,7 @@ func (s *Storage) GetSlotCounters(ctx context.Context, slotID, groupID uint64) (
 	return counters, nil
 }
 
-func (s *Storage) GetBannersBySlot(ctx context.Context, slotID uint64) ([]uint64, error) {
+func (s *Storage) GetBannersBySlot(ctx context.Context, slotID uint64) ([]entities.BannerID, error) {
 	query := `SELECT banner_id FROM slot2banner WHERE slot_id=:slotID LIMIT :slotLimit`
 	arg := map[string]interface{}{
 		"slotID":    slotID,
@@ -178,8 +159,8 @@ func (s *Storage) GetBannersBySlot(ctx context.Context, slotID uint64) ([]uint64
 	}
 	defer rows.Close()
 
-	var bannerID uint64
-	var bannerIDs []uint64
+	var bannerID entities.BannerID
+	var bannerIDs []entities.BannerID
 	for rows.Next() {
 		if err = rows.Scan(&bannerID); err != nil {
 			return nil, err

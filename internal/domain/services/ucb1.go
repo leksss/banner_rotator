@@ -8,8 +8,8 @@ import (
 	"github.com/leksss/banner_rotator/internal/infrastructure/logger"
 )
 
-// calculate Upper Confidence Bound algorithm
-func CalculateBestBanner(log logger.Log, bannerIDs []uint64, counters map[uint64]*entities.Counter) uint64 {
+// CalculateBestBanner calculate Upper Confidence Bound algorithm
+func CalculateBestBanner(log logger.Log, bannerIDs []entities.BannerID, counters entities.BannerCounterMap) entities.BannerID {
 	totalShowCnt := float64(0)
 	for _, id := range bannerIDs {
 		if c, ok := counters[id]; ok {
@@ -20,7 +20,7 @@ func CalculateBestBanner(log logger.Log, bannerIDs []uint64, counters map[uint64
 		totalShowCnt = float64(len(bannerIDs))
 	}
 
-	rates := make(map[uint64]float64)
+	rates := make(map[entities.BannerID]float64)
 	for _, id := range bannerIDs {
 		c, ok := counters[id]
 		if !ok {
@@ -33,7 +33,7 @@ func CalculateBestBanner(log logger.Log, bannerIDs []uint64, counters map[uint64
 		log.Info(fmt.Sprintf("rate for bannerID %d: %f", id, rates[id]))
 	}
 
-	bestBannerID := uint64(0)
+	bestBannerID := entities.BannerID(0)
 	maxRate := float64(0)
 	for bannerID, rate := range rates {
 		if maxRate <= rate {

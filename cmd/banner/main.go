@@ -10,12 +10,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Shopify/sarama"
+	"github.com/jmoiron/sqlx"
 	"github.com/leksss/banner_rotator/internal/app"
-	"github.com/leksss/banner_rotator/internal/domain/interfaces"
 	"github.com/leksss/banner_rotator/internal/infrastructure/config"
 	"github.com/leksss/banner_rotator/internal/infrastructure/eventbus"
 	"github.com/leksss/banner_rotator/internal/infrastructure/logger"
-	memory "github.com/leksss/banner_rotator/internal/infrastructure/storage/memory"
 	mysql "github.com/leksss/banner_rotator/internal/infrastructure/storage/sql"
 	grpc "github.com/leksss/banner_rotator/internal/server/grpc"
 	"github.com/pkg/errors"
@@ -45,20 +45,26 @@ func main() {
 
 	logg := logger.New(conf.Logger, conf.GetProjectRoot(), conf.IsDebug())
 
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	defer cancel()
 
-	storage := createStorageInstance(ctx, conf, logg)
-	defer storage.Close(ctx)
-
-	bus := eventbus.New(conf.Kafka)
-	if err := bus.Connect(ctx); err != nil {
-		logg.Error(fmt.Sprintf("Connect to event bus failed: %s", err.Error()))
+	dbConn, err := sqlx.ConnectContext(ctx, "mysql", conf.Database.DSN())
+	if err != nil {
+		logg.Error(fmt.Sprintf("connect to storage failed: %s", err.Error()))
 	}
-	defer bus.Close(ctx)
+	defer dbConn.Close()
 
-	calendar := app.New(logg, storage, bus)
-	server := grpc.NewServer(logg, calendar, conf)
+	kafkaConn, err := sarama.NewSyncProducer([]string{conf.Kafka.DSN()}, createKafkaConfig())
+	if err != nil {
+		logg.Error(fmt.Sprintf("connect to event bus failed: %s", err.Error()))
+	}
+	defer kafkaConn.Close()
+
+	storage := mysql.New(dbConn, logg)
+	bus := eventbus.New(kafkaConn, conf.Kafka.Topic, logg)
+
+	bannerRotator := app.New(logg, storage, bus)
+	server := grpc.NewServer(logg, bannerRotator, conf)
 
 	errs := make(chan error)
 
@@ -110,16 +116,10 @@ func main() {
 	}
 }
 
-func createStorageInstance(ctx context.Context, conf config.Config, logg logger.Log) interfaces.Storage {
-	var storage interfaces.Storage
-	if conf.Env == config.EnvTest {
-		storage = memory.New()
-	} else {
-		storage = mysql.New(conf.Database, logg)
-	}
-
-	if err := storage.Connect(ctx); err != nil {
-		logg.Error(fmt.Sprintf("Connect to storage failed: %s", err.Error()))
-	}
-	return storage
+func createKafkaConfig() *sarama.Config {
+	config := sarama.NewConfig()
+	config.Producer.Return.Successes = true
+	config.Producer.RequiredAcks = sarama.WaitForAll
+	config.Producer.Retry.Max = 5
+	return config
 }

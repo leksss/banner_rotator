@@ -4,9 +4,9 @@ services:
   db:
     image: mysql:8.0.21
     container_name: banner_rotator_db
-    volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-#    restart: always
+    #    volumes:
+    #      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    #    restart: always
     environment:
       MYSQL_DATABASE: 'banner_rotator'
       MYSQL_USER: 'user'
@@ -19,6 +19,7 @@ services:
 
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
+    container_name: banner_rotator_zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -27,6 +28,7 @@ services:
 
   kafka:
     image: confluentinc/cp-kafka:latest
+    container_name: banner_rotator_kafka
     depends_on:
       - zookeeper
     ports:

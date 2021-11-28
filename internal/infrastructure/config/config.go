@@ -7,16 +7,16 @@ import (
 	"path"
 	"runtime"
 
-	"github.com/leksss/banner_rotator/internal/domain/interfaces"
 	"github.com/leksss/banner_rotator/internal/infrastructure/eventbus"
 	"github.com/leksss/banner_rotator/internal/infrastructure/logger"
+	sqlstorage "github.com/leksss/banner_rotator/internal/infrastructure/storage/sql"
 	"github.com/leksss/banner_rotator/internal/server"
 	"gopkg.in/yaml.v2"
 )
 
 const (
-	EnvTest = "test"
 	EnvDev  = "dev"
+	EnvTest = "test" //nolintlint
 	EnvProd = "prod" //nolintlint
 )
 
@@ -28,7 +28,7 @@ type Config struct {
 	HTTPAddr server.Config           `yaml:"http"`
 	GRPCAddr server.Config           `yaml:"grpc"`
 	Logger   logger.LoggConf         `yaml:"logger"`
-	Database interfaces.DatabaseConf `yaml:"database"`
+	Database sqlstorage.DatabaseConf `yaml:"database"`
 	Kafka    eventbus.KafkaConf      `yaml:"kafka"`
 }
 

@@ -120,8 +120,8 @@ func (a *App) GetBanner(ctx context.Context, in *pb.GetBannerRequest) (*pb.GetBa
 		return getBannerErrorResponse(errors.ErrBannerNotFound)
 	}
 
-	incErrCh := a.goIncrementCounter(ctx, in.SlotID, bestBannerID, in.GroupID, false)
-	busErrCh := a.goAddShowEvent(ctx, in.SlotID, bestBannerID, in.GroupID, entities.EventTypeShow)
+	incErrCh := a.goIncrementCounter(ctx, in.SlotID, uint64(bestBannerID), in.GroupID, false)
+	busErrCh := a.goAddShowEvent(ctx, in.SlotID, uint64(bestBannerID), in.GroupID, entities.EventTypeShow)
 	if err := <-incErrCh; err != nil {
 		return getBannerErrorResponse(err)
 	}
@@ -131,7 +131,7 @@ func (a *App) GetBanner(ctx context.Context, in *pb.GetBannerRequest) (*pb.GetBa
 
 	return &pb.GetBannerResponse{
 		Success:  true,
-		BannerID: bestBannerID,
+		BannerID: uint64(bestBannerID),
 	}, nil
 }
 
@@ -149,8 +149,8 @@ func getBannerErrorResponse(err error) (*pb.GetBannerResponse, error) {
 	}, nil
 }
 
-func (a *App) goGetBannersBySlot(ctx context.Context, slotID uint64) (<-chan []uint64, <-chan error) {
-	resCh := make(chan []uint64, 1)
+func (a *App) goGetBannersBySlot(ctx context.Context, slotID uint64) (<-chan []entities.BannerID, <-chan error) {
+	resCh := make(chan []entities.BannerID, 1)
 	errCh := make(chan error, 1)
 	go func() {
 		bannerIDs, err := a.storage.GetBannersBySlot(ctx, slotID)
@@ -160,8 +160,8 @@ func (a *App) goGetBannersBySlot(ctx context.Context, slotID uint64) (<-chan []u
 	return resCh, errCh
 }
 
-func (a *App) goGetSlotCounters(ctx context.Context, slotID, groupID uint64) (<-chan map[uint64]*entities.Counter, <-chan error) {
-	resCh := make(chan map[uint64]*entities.Counter, 1)
+func (a *App) goGetSlotCounters(ctx context.Context, slotID, groupID uint64) (<-chan entities.BannerCounterMap, <-chan error) {
+	resCh := make(chan entities.BannerCounterMap, 1)
 	errCh := make(chan error, 1)
 	go func() {
 		counters, err := a.storage.GetSlotCounters(ctx, slotID, groupID)
@@ -171,7 +171,7 @@ func (a *App) goGetSlotCounters(ctx context.Context, slotID, groupID uint64) (<-
 	return resCh, errCh
 }
 
-func (a *App) goIncrementCounter(ctx context.Context, slotID, bannerID, groupID uint64, isHit bool) <-chan error {
+func (a *App) goIncrementCounter(ctx context.Context, slotID uint64, bannerID uint64, groupID uint64, isHit bool) <-chan error {
 	errCh := make(chan error, 1)
 	go func() {
 		var err error
@@ -185,7 +185,7 @@ func (a *App) goIncrementCounter(ctx context.Context, slotID, bannerID, groupID 
 	return errCh
 }
 
-func (a *App) goAddShowEvent(ctx context.Context, slotID, bannerID, groupID, eventType uint64) <-chan error {
+func (a *App) goAddShowEvent(ctx context.Context, slotID uint64, bannerID uint64, groupID uint64, eventType entities.EventType) <-chan error {
 	errCh := make(chan error, 1)
 	go func() {
 		stat := entities.EventStat{

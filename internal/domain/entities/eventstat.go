@@ -2,14 +2,16 @@ package entities
 
 import "time"
 
+type EventType int
+
 const (
-	EventTypeUndefined = 0
-	EventTypeHit       = 1
-	EventTypeShow      = 2
+	EventTypeUndefined EventType = iota
+	EventTypeHit
+	EventTypeShow
 )
 
 type EventStat struct {
-	EventType uint64
+	EventType EventType
 	SlotID    uint64
 	BannerID  uint64
 	GroupID   uint64
