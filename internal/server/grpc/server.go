@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"strings"
-	"time"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
@@ -75,7 +73,7 @@ func (s *Server) StartHTTPProxy() error {
 		s.log.Error("failed to register gateway:", zap.Error(err))
 	}
 
-	s.http.Handler = logRequest(gwMux, s.log)
+	s.http.Handler = loggingMiddleware(gwMux, s.log)
 	s.log.Info(fmt.Sprintf("serving gRPC-Gateway on %s", s.http.Addr))
 	return s.http.ListenAndServe()
 }
@@ -88,48 +86,4 @@ func (s *Server) StopHTTPProxy(ctx context.Context) error {
 func (s *Server) StopGRPC() {
 	s.log.Info("stopping gRPC server...")
 	s.grpc.GracefulStop()
-}
-
-func logRequest(handler http.Handler, logger interfaces.Log) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		o := &responseObserver{ResponseWriter: w}
-		handler.ServeHTTP(o, r)
-		addr := r.RemoteAddr
-		if i := strings.LastIndex(addr, ":"); i != -1 {
-			addr = addr[:i]
-		}
-		logger.Info(fmt.Sprintf("%s - - [%s] %q %d %d %q %q",
-			addr,
-			time.Now().Format("02/Jan/2006:15:04:05 -0700"),
-			fmt.Sprintf("%s %s %s", r.Method, r.URL, r.Proto),
-			o.status,
-			o.written,
-			r.Referer(),
-			r.UserAgent()))
-	})
-}
-
-type responseObserver struct {
-	http.ResponseWriter
-	status      int
-	written     int64
-	wroteHeader bool
-}
-
-func (o *responseObserver) Write(p []byte) (n int, err error) {
-	if !o.wroteHeader {
-		o.WriteHeader(http.StatusOK)
-	}
-	n, err = o.ResponseWriter.Write(p)
-	o.written += int64(n)
-	return
-}
-
-func (o *responseObserver) WriteHeader(code int) {
-	o.ResponseWriter.WriteHeader(code)
-	if o.wroteHeader {
-		return
-	}
-	o.wroteHeader = true
-	o.status = code
 }
