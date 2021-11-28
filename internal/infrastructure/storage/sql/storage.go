@@ -10,7 +10,7 @@ import (
 	_ "github.com/go-sql-driver/mysql" // nolint
 	"github.com/jmoiron/sqlx"
 	"github.com/leksss/banner_rotator/internal/domain/entities"
-	"github.com/leksss/banner_rotator/internal/infrastructure/logger"
+	"github.com/leksss/banner_rotator/internal/domain/interfaces"
 )
 
 const (
@@ -23,10 +23,10 @@ const (
 
 type Storage struct {
 	db  *sqlx.DB
-	log logger.Log
+	log interfaces.Log
 }
 
-func New(db *sqlx.DB, log logger.Log) *Storage {
+func New(db *sqlx.DB, log interfaces.Log) *Storage {
 	return &Storage{
 		log: log,
 		db:  db,

@@ -5,11 +5,11 @@ import (
 	"math"
 
 	"github.com/leksss/banner_rotator/internal/domain/entities"
-	"github.com/leksss/banner_rotator/internal/infrastructure/logger"
+	"github.com/leksss/banner_rotator/internal/domain/interfaces"
 )
 
 // CalculateBestBanner calculate Upper Confidence Bound algorithm
-func CalculateBestBanner(log logger.Log, bannerIDs []entities.BannerID, counters entities.BannerCounterMap) entities.BannerID {
+func CalculateBestBanner(log interfaces.Log, bannerIDs []entities.BannerID, counters entities.BannerCounterMap) entities.BannerID {
 	totalShowCnt := float64(0)
 	for _, id := range bannerIDs {
 		if c, ok := counters[id]; ok {

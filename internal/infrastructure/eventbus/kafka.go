@@ -7,16 +7,16 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/leksss/banner_rotator/internal/domain/entities"
-	"github.com/leksss/banner_rotator/internal/infrastructure/logger"
+	"github.com/leksss/banner_rotator/internal/domain/interfaces"
 )
 
 type KafkaEventBus struct {
 	conn  sarama.SyncProducer
 	topic string
-	log   logger.Log
+	log   interfaces.Log
 }
 
-func New(conn sarama.SyncProducer, topic string, log logger.Log) *KafkaEventBus {
+func New(conn sarama.SyncProducer, topic string, log interfaces.Log) *KafkaEventBus {
 	return &KafkaEventBus{
 		conn:  conn,
 		topic: topic,

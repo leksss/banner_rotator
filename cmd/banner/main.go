@@ -12,7 +12,6 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/jmoiron/sqlx"
-	"github.com/leksss/banner_rotator/internal/app"
 	"github.com/leksss/banner_rotator/internal/infrastructure/config"
 	"github.com/leksss/banner_rotator/internal/infrastructure/eventbus"
 	"github.com/leksss/banner_rotator/internal/infrastructure/logger"
@@ -63,8 +62,7 @@ func main() {
 	storage := mysql.New(dbConn, logg)
 	bus := eventbus.New(kafkaConn, conf.Kafka.Topic, logg)
 
-	bannerRotator := app.New(logg, storage, bus)
-	server := grpc.NewServer(logg, bannerRotator, conf)
+	server := grpc.NewServer(logg, conf, storage, bus)
 
 	errs := make(chan error)
 
@@ -117,9 +115,9 @@ func main() {
 }
 
 func createKafkaConfig() *sarama.Config {
-	config := sarama.NewConfig()
-	config.Producer.Return.Successes = true
-	config.Producer.RequiredAcks = sarama.WaitForAll
-	config.Producer.Retry.Max = 5
-	return config
+	conf := sarama.NewConfig()
+	conf.Producer.Return.Successes = true
+	conf.Producer.RequiredAcks = sarama.WaitForAll
+	conf.Producer.Retry.Max = 5
+	return conf
 }

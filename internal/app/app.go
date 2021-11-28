@@ -8,17 +8,16 @@ import (
 	"github.com/leksss/banner_rotator/internal/domain/errors"
 	"github.com/leksss/banner_rotator/internal/domain/interfaces"
 	"github.com/leksss/banner_rotator/internal/domain/services"
-	"github.com/leksss/banner_rotator/internal/infrastructure/logger"
 	pb "github.com/leksss/banner_rotator/proto/protobuf"
 )
 
 type App struct {
-	logger  logger.Log
+	logger  interfaces.Log
 	storage interfaces.Storage
 	bus     interfaces.EventBus
 }
 
-func New(logger logger.Log, storage interfaces.Storage, bus interfaces.EventBus) *App {
+func New(logger interfaces.Log, storage interfaces.Storage, bus interfaces.EventBus) *App {
 	return &App{
 		logger:  logger,
 		storage: storage,

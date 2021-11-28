@@ -7,13 +7,6 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type Log interface {
-	GetLogger() *zap.Logger
-	Info(msg string, fields ...zap.Field)
-	Warn(msg string, fields ...zap.Field)
-	Error(msg string, fields ...zap.Field)
-}
-
 type Logger struct {
 	logger *zap.Logger
 }

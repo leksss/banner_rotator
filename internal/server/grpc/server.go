@@ -11,9 +11,8 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/leksss/banner_rotator/internal/app"
+	"github.com/leksss/banner_rotator/internal/domain/interfaces"
 	"github.com/leksss/banner_rotator/internal/infrastructure/config"
-	"github.com/leksss/banner_rotator/internal/infrastructure/logger"
 	pb "github.com/leksss/banner_rotator/proto/protobuf"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -21,20 +20,22 @@ import (
 
 type Server struct {
 	grpcAddr string
-	app      *app.App
 	http     *http.Server
 	grpc     *grpc.Server
-	log      logger.Log
+	log      interfaces.Log
+	storage  interfaces.Storage
+	eventBus interfaces.EventBus
 }
 
-func NewServer(log logger.Log, app *app.App, config config.Config) *Server {
+func NewServer(log interfaces.Log, config config.Config, storage interfaces.Storage, eventBus interfaces.EventBus) *Server {
 	return &Server{
-		app:      app,
 		log:      log,
-		grpcAddr: fmt.Sprintf("%s:%s", config.GRPCAddr.Host, config.GRPCAddr.Port),
+		grpcAddr: config.GRPCAddr.DSN(),
 		http: &http.Server{
-			Addr: fmt.Sprintf("%s:%s", config.HTTPAddr.Host, config.HTTPAddr.Port),
+			Addr: config.HTTPAddr.DSN(),
 		},
+		storage:  storage,
+		eventBus: eventBus,
 	}
 }
 
@@ -51,7 +52,7 @@ func (s *Server) StartGRPC() error {
 			grpc_zap.UnaryServerInterceptor(s.log.GetLogger()),
 		)),
 	)
-	pb.RegisterBannerRotatorServiceServer(s.grpc, NewBannerRotatorService(s.app))
+	pb.RegisterBannerRotatorServiceServer(s.grpc, NewBannerRotatorService(s.log, s.storage, s.eventBus))
 
 	s.log.Info(fmt.Sprintf("serving gRPC on %s", s.grpcAddr))
 	return s.grpc.Serve(lis)
@@ -89,7 +90,7 @@ func (s *Server) StopGRPC() {
 	s.grpc.GracefulStop()
 }
 
-func logRequest(handler http.Handler, logger logger.Log) http.Handler {
+func logRequest(handler http.Handler, logger interfaces.Log) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		o := &responseObserver{ResponseWriter: w}
 		handler.ServeHTTP(o, r)
