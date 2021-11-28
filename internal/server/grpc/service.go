@@ -119,7 +119,7 @@ func (s *BannerRotatorService) GetBanner(ctx context.Context, in *pb.GetBannerRe
 		return getBannerErrorResponse(err)
 	}
 
-	bestBannerID := services.CalculateBestBanner(s.log, bannerIDs, counters)
+	bestBannerID := services.CalculateBestBanner(bannerIDs, counters)
 	if bestBannerID == 0 {
 		return getBannerErrorResponse(errors.ErrBannerNotFound)
 	}
