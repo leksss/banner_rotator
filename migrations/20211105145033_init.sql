@@ -76,17 +76,17 @@ VALUES ('девушки 20-25'),
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE `slot`;
+DROP TABLE IF EXISTS `slot`;
 -- +goose StatementEnd
 -- +goose StatementBegin
-DROP TABLE `banner`;
+DROP TABLE IF EXISTS `banner`;
 -- +goose StatementEnd
 -- +goose StatementBegin
-DROP TABLE `group`;
+DROP TABLE IF EXISTS `group`;
 -- +goose StatementEnd
 -- +goose StatementBegin
-DROP TABLE `slot2banner`;
+DROP TABLE IF EXISTS `slot2banner`;
 -- +goose StatementEnd
 -- +goose StatementBegin
-DROP TABLE `ucb1`;
+DROP TABLE IF EXISTS `ucb1`;
 -- +goose StatementEnd

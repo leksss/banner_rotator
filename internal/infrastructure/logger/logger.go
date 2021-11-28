@@ -60,3 +60,7 @@ func (l Logger) Warn(msg string, fields ...zap.Field) {
 func (l Logger) Error(msg string, fields ...zap.Field) {
 	l.logger.Error(msg, fields...)
 }
+
+func (l Logger) Debug(msg string, fields ...zap.Field) {
+	l.logger.Debug(msg, fields...)
+}
