@@ -38,7 +38,7 @@ jobs:
         uses: golangci/golangci-lint-action@v2
         with:
           version: v1.40
-          working-directory: ./...
+          working-directory: .
 
   tests:
     runs-on: ubuntu-latest
