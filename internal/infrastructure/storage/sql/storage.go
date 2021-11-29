@@ -76,19 +76,19 @@ func (s *Storage) incrementCounter(ctx context.Context, slotID, bannerID, groupI
 	}
 	defer rows.Close()
 
-	var row ucb1Row
-	if !rows.Next() {
-		query = `INSERT INTO ucb1 (slot_id, banner_id, group_id, hit_cnt, show_cnt) 
+	query = `INSERT INTO ucb1 (slot_id, banner_id, group_id, hit_cnt, show_cnt) 
 					VALUES (:slotID, :bannerID, :groupID, :hitCnt, :showCnt)`
-		if field == hitField {
-			params["hitCnt"] = 1
-			params["showCnt"] = 0
-		}
-		if field == showField {
-			params["hitCnt"] = 0
-			params["showCnt"] = 1
-		}
-	} else {
+	if field == hitField {
+		params["hitCnt"] = 1
+		params["showCnt"] = 0
+	}
+	if field == showField {
+		params["hitCnt"] = 0
+		params["showCnt"] = 1
+	}
+
+	var row ucb1Row
+	if rows.Next() {
 		if err = rows.StructScan(&row); err != nil {
 			return err
 		}

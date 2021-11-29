@@ -15,8 +15,11 @@ import (
 )
 
 const (
+	// EnvDev development environment.
 	EnvDev  = "dev"
+	// EnvTest test environment.
 	EnvTest = "test" //nolintlint
+	// EnvProd prod environment.
 	EnvProd = "prod" //nolintlint
 )
 

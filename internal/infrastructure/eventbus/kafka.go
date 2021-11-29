@@ -25,13 +25,13 @@ func New(conn sarama.SyncProducer, topic string, log interfaces.Log) *KafkaEvent
 }
 
 func (k *KafkaEventBus) AddEvent(ctx context.Context, stat entities.EventStat) error {
-	statJson, err := json.Marshal(stat)
+	statJSON, err := json.Marshal(stat)
 	if err != nil {
 		return err
 	}
 	msg := &sarama.ProducerMessage{
 		Topic: k.topic,
-		Value: sarama.StringEncoder(statJson),
+		Value: sarama.StringEncoder(statJSON),
 	}
 	_, _, err = k.conn.SendMessage(msg)
 	if err != nil {

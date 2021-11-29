@@ -18,7 +18,8 @@ type BannerRotatorService struct {
 	eventBus interfaces.EventBus
 }
 
-func NewBannerRotatorService(log interfaces.Log, storage interfaces.Storage, eventBus interfaces.EventBus) *BannerRotatorService {
+func NewBannerRotatorService(log interfaces.Log, storage interfaces.Storage,
+	eventBus interfaces.EventBus) *BannerRotatorService {
 	return &BannerRotatorService{
 		log:      log,
 		storage:  storage,
@@ -30,7 +31,7 @@ func (s *BannerRotatorService) AddBanner(ctx context.Context, in *pb.AddBannerRe
 	if in.SlotID == 0 || in.BannerID == 0 {
 		return &pb.AddBannerResponse{
 			Success: false,
-			Errors:  toProtoError([]*pb.Error{}, errors.ErrInvalidRequestSlotAndBannerAreRequired),
+			Errors:  toProtoError([]*pb.Error{}, errors.ErrInvalidRequestSlotBannerRequired),
 		}, nil
 	}
 
@@ -46,11 +47,12 @@ func (s *BannerRotatorService) AddBanner(ctx context.Context, in *pb.AddBannerRe
 	}, nil
 }
 
-func (s *BannerRotatorService) RemoveBanner(ctx context.Context, in *pb.RemoveBannerRequest) (*pb.RemoveBannerResponse, error) {
+func (s *BannerRotatorService) RemoveBanner(ctx context.Context,
+	in *pb.RemoveBannerRequest) (*pb.RemoveBannerResponse, error) {
 	if in.SlotID == 0 || in.BannerID == 0 {
 		return &pb.RemoveBannerResponse{
 			Success: false,
-			Errors:  toProtoError([]*pb.Error{}, errors.ErrInvalidRequestSlotAndBannerAreRequired),
+			Errors:  toProtoError([]*pb.Error{}, errors.ErrInvalidRequestSlotBannerRequired),
 		}, nil
 	}
 
@@ -70,7 +72,7 @@ func (s *BannerRotatorService) HitBanner(ctx context.Context, in *pb.HitBannerRe
 	if in.SlotID == 0 || in.BannerID == 0 || in.GroupID == 0 {
 		return &pb.HitBannerResponse{
 			Success: false,
-			Errors:  toProtoError([]*pb.Error{}, errors.ErrInvalidRequestSlotAndBannerAndGroupAreRequired),
+			Errors:  toProtoError([]*pb.Error{}, errors.ErrInvalidRequestSlotBannerGroupRequired),
 		}, nil
 	}
 
@@ -103,7 +105,7 @@ func (s *BannerRotatorService) HitBanner(ctx context.Context, in *pb.HitBannerRe
 
 func (s *BannerRotatorService) GetBanner(ctx context.Context, in *pb.GetBannerRequest) (*pb.GetBannerResponse, error) {
 	if in.SlotID == 0 || in.GroupID == 0 {
-		return getBannerErrorResponse(errors.ErrInvalidRequestSlotAndGroupAreRequired)
+		return getBannerErrorResponse(errors.ErrInvalidRequestSlotGroupRequired)
 	}
 
 	bannerIDs, err := s.storage.GetBannersBySlot(ctx, in.SlotID)

@@ -25,7 +25,8 @@ type Server struct {
 	eventBus interfaces.EventBus
 }
 
-func NewServer(log interfaces.Log, config config.Config, storage interfaces.Storage, eventBus interfaces.EventBus) *Server {
+func NewServer(log interfaces.Log, config config.Config, storage interfaces.Storage,
+	eventBus interfaces.EventBus) *Server {
 	return &Server{
 		log:      log,
 		grpcAddr: config.GRPCAddr.DSN(),

@@ -1,16 +1,17 @@
 package errors
 
-type BannerError string
+import "github.com/pkg/errors"
 
 var (
-	ErrInvalidRequestSlotAndBannerAreRequired         = BannerError("Invalid request. slotID and bannerID are required")
-	ErrInvalidRequestSlotAndBannerAndGroupAreRequired = BannerError("Invalid request. slotID, bannerID and groupID are required")
-	ErrInvalidRequestSlotAndGroupAreRequired          = BannerError("Invalid request. slotID and groupID are required")
+	// ErrInvalidRequestSlotBannerRequired validation error.
+	ErrInvalidRequestSlotBannerRequired = errors.New("Invalid request. slotID and bannerID are required")
+	// ErrInvalidRequestSlotBannerGroupRequired validation error.
+	ErrInvalidRequestSlotBannerGroupRequired = errors.New("Invalid request. slotID, bannerID and groupID are required")
+	// ErrInvalidRequestSlotGroupRequired validation error.
+	ErrInvalidRequestSlotGroupRequired = errors.New("Invalid request. slotID and groupID are required")
 
-	ErrBannerNotFound           = BannerError("Banner not found")
-	ErrNoAvailableBannersInSlot = BannerError("No available banners in slot")
+	// ErrBannerNotFound logic error.
+	ErrBannerNotFound = errors.New("Banner not found")
+	// ErrNoAvailableBannersInSlot logic error.
+	ErrNoAvailableBannersInSlot = errors.New("No available banners in slot")
 )
-
-func (ee BannerError) Error() string {
-	return string(ee)
-}

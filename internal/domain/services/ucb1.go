@@ -6,7 +6,7 @@ import (
 	"github.com/leksss/banner_rotator/internal/domain/entities"
 )
 
-// CalculateBestBanner calculate Upper Confidence Bound algorithm
+// CalculateBestBanner calculate Upper Confidence Bound algorithm.
 func CalculateBestBanner(bannerIDs []entities.BannerID, counters entities.BannerCounterMap) entities.BannerID {
 	totalShowCnt := float64(0)
 	for _, id := range bannerIDs {

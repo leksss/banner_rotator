@@ -5,5 +5,4 @@ import (
 )
 
 func TestStorage(t *testing.T) {
-
 }

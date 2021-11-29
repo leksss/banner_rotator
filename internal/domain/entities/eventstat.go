@@ -5,8 +5,9 @@ import "time"
 type EventType int
 
 const (
-	EventTypeUndefined EventType = iota
-	EventTypeHit
+	// EventTypeHit hit event.
+	EventTypeHit EventType = iota + 1
+	// EventTypeShow show event.
 	EventTypeShow
 )
 
