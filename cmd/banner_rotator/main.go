@@ -21,7 +21,7 @@ import (
 	"go.uber.org/zap"
 )
 
-//go:generate ./proto_generator.sh
+//go:generate ../proto_generator.sh
 
 const (
 	appShutdownMessage      = "application exits"

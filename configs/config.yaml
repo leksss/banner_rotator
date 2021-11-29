@@ -2,11 +2,11 @@ env: dev
 
 http:
   host: localhost
-  port: 8877
+  port: 8080
 
 grpc:
   host: localhost
-  port: 8855
+  port: 8081
 
 logger:
   level: INFO
@@ -15,7 +15,7 @@ logger:
 database:
   host: localhost
   user: user
-  password: 1234
+  password: J1JyJovTelvERLF9
   name: banner_rotator
 
 kafka:

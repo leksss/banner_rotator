@@ -1,17 +1,28 @@
 version: "3"
 
 services:
+  banner_rotator_go:
+    container_name: banner_rotator_go
+    build:
+      context: ..
+      dockerfile: build/Dockerfile
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    command: /opt/banner_rotator/banner_rotator
+    depends_on:
+      - db
+      - zookeeper
+      - kafka
+
   db:
     image: mysql:8.0.21
     container_name: banner_rotator_db
-    #    volumes:
-    #      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    #    restart: always
     environment:
       MYSQL_DATABASE: 'banner_rotator'
       MYSQL_USER: 'user'
-      MYSQL_PASSWORD: '1234'
-      MYSQL_ROOT_PASSWORD: '1234'
+      MYSQL_PASSWORD: 'J1JyJovTelvERLF9'
+      MYSQL_ROOT_PASSWORD: 'QR6PaStNa6Lca0i1'
     ports:
       - '3306:3306'
     expose:
