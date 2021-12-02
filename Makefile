@@ -6,23 +6,13 @@ GIT_HASH := $(shell git log --format="%h" -n 1)
 LDFLAGS := -X main.release="develop" -X main.buildDate=$(shell date -u +%Y-%m-%dT%H:%M:%S) -X main.gitHash=$(GIT_HASH)
 
 build:
-	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/banner_rotator
+	docker-compose -f build/docker-compose.yaml build --no-cache
 
-build-migrator:
-	go build -v -o $(MIGRATOR_BIN) -ldflags "$(LDFLAGS)" ./cmd/migration
+run:
+	docker-compose -f build/docker-compose.yaml up -d --build
 
-run: build
-	$(BIN) -config ./configs/config.yaml
-
-build-img:
-	docker build \
-		--no-cache \
-		--build-arg=LDFLAGS="$(LDFLAGS)" \
-		-t $(DOCKER_IMG) \
-		-f build/Dockerfile .
-
-run-img: build-img
-	docker run $(DOCKER_IMG)
+stop:
+	docker-compose -f build/docker-compose.yaml down
 
 version: build
 	$(BIN) version
@@ -35,6 +25,9 @@ install-lint-deps:
 
 lint: install-lint-deps
 	golangci-lint run ./...
+
+build-migrator:
+	go build -v -o $(MIGRATOR_BIN) -ldflags "$(LDFLAGS)" ./cmd/migration
 
 migrate:
 	$(MIGRATOR_BIN) -dir=./migrations mysql up
