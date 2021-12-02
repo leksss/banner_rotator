@@ -47,7 +47,7 @@ func (c *Config) Parse() error {
 		log.Fatal(err.Error())
 	}
 
-	configYml, err := ioutil.ReadFile(projectRoot + "/" + c.configFile)
+	configYml, err := ioutil.ReadFile(path.Join(projectRoot, c.configFile))
 	if err != nil {
 		return err
 	}

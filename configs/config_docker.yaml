@@ -1,0 +1,24 @@
+env: dev
+
+http:
+  host: localhost
+  port: 8080
+
+grpc:
+  host: localhost
+  port: 8081
+
+logger:
+  level: INFO
+  file: logs/logger.json
+
+database:
+  host: mysql
+  user: user
+  password: J1JyJovTelvERLF9
+  name: banner_rotator
+
+kafka:
+  host: kafka
+  port: 29092
+  topic: banner_rotator_stat

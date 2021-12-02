@@ -40,8 +40,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err.Error()) //nolintlint
 	}
-	dsn := fmt.Sprintf("%s:%s@/%s?parseTime=true",
-		conf.Database.User, conf.Database.Password, conf.Database.Name)
+	dsn := fmt.Sprintf("%s:%s@%s/%s?parseTime=true",
+		conf.Database.User, conf.Database.Password, conf.Database.Host, conf.Database.Name)
 
 	db, err := goose.OpenDBWithDriver("mysql", dsn)
 	if err != nil {

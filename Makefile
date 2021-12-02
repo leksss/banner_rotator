@@ -1,4 +1,5 @@
 BIN := "./bin/banner_rotator"
+MIGRATOR_BIN := "./bin/migrator"
 DOCKER_IMG="banner_rotator:develop"
 
 GIT_HASH := $(shell git log --format="%h" -n 1)
@@ -6,6 +7,9 @@ LDFLAGS := -X main.release="develop" -X main.buildDate=$(shell date -u +%Y-%m-%d
 
 build:
 	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/banner_rotator
+
+build-migrator:
+	go build -v -o $(MIGRATOR_BIN) -ldflags "$(LDFLAGS)" ./cmd/migration
 
 run: build
 	$(BIN) -config ./configs/config.yaml
@@ -33,7 +37,7 @@ lint: install-lint-deps
 	golangci-lint run ./...
 
 migrate:
-	go run cmd/migration/main.go -dir=./migrations mysql up
+	$(MIGRATOR_BIN) -dir=./migrations mysql up
 
 generate:
 	go generate ./cmd/banner_rotator

@@ -2,6 +2,7 @@ package logger
 
 import (
 	"log"
+	"path"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -16,25 +17,15 @@ type LoggConf struct {
 	File  string
 }
 
-func New(config LoggConf, projectRoot string, isDebug bool) *Logger {
+func New(zapConfig zap.Config, config LoggConf, projectRoot string) *Logger {
 	var zapLevel zapcore.Level
 	zapLevel.Set(config.Level)
-
-	var cfg zap.Config
-	if isDebug {
-		cfg = zap.NewDevelopmentConfig()
-	} else {
-		cfg = zap.NewProductionConfig()
-	}
-
-	cfg.Level.SetLevel(zapLevel)
-
-	cfg.OutputPaths = []string{
+	zapConfig.Level.SetLevel(zapLevel)
+	zapConfig.OutputPaths = []string{
 		"stdout",
-		projectRoot + "/" + config.File,
+		path.Join(projectRoot, config.File),
 	}
-
-	logger, err := cfg.Build(zap.AddCallerSkip(1))
+	logger, err := zapConfig.Build(zap.AddCallerSkip(1))
 	if err != nil {
 		log.Fatalf("can't initialize logger logger: %v", err)
 	}

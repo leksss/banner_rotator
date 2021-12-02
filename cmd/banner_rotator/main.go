@@ -29,20 +29,26 @@ const (
 )
 
 func main() {
-	configFile := flag.String("config", "configs/config.yaml", "path to conf file")
-	conf := config.NewConfig(*configFile)
-	err := conf.Parse()
-	if err != nil {
-		log.Fatal(err.Error()) //nolintlint
-	}
-
+	configFile := flag.String("config", "configs/config_docker.yaml", "path to conf file")
 	flag.Parse()
 	if flag.Arg(0) == "version" {
 		printVersion()
 		return
 	}
 
-	logg := logger.New(conf.Logger, conf.GetProjectRoot(), conf.IsDebug())
+	conf := config.NewConfig(*configFile)
+	err := conf.Parse()
+	if err != nil {
+		log.Fatal(err.Error()) //nolintlint
+	}
+
+	var zapConfig zap.Config
+	if conf.IsDebug() {
+		zapConfig = zap.NewDevelopmentConfig()
+	} else {
+		zapConfig = zap.NewProductionConfig()
+	}
+	logg := logger.New(zapConfig, conf.Logger, conf.GetProjectRoot())
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	defer cancel()

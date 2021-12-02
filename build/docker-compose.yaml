@@ -1,23 +1,37 @@
 version: "3"
 
 services:
-  banner_rotator_go:
+  app:
     container_name: banner_rotator_go
     build:
-      context: ..
+      context: ../
       dockerfile: build/Dockerfile
     ports:
-      - "8080:8080"
-      - "8081:8081"
-    command: /opt/banner_rotator/banner_rotator
+      - '8080:8080'
+      - '8081:8081'
+    expose:
+      - '8080'
+      - '8081'
+    command: [
+        'dockerize',
+        '-wait', 'tcp://mysql:3306',
+        '-wait', 'tcp://kafka:29092',
+        '-timeout', '30s',
+        '-wait-retry-interval', '5s',
+        '/go/src/build/start.sh'
+    ]
     depends_on:
-      - db
-      - zookeeper
+      - mysql
       - kafka
+    networks:
+      - internal
 
-  db:
+  mysql:
     image: mysql:8.0.21
     container_name: banner_rotator_db
+    volumes:
+#      - ./data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
       MYSQL_DATABASE: 'banner_rotator'
       MYSQL_USER: 'user'
@@ -27,6 +41,8 @@ services:
       - '3306:3306'
     expose:
       - '3306'
+    networks:
+      - internal
 
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
@@ -35,7 +51,11 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
-      - 22181:2181
+      - '22181:2181'
+    expose:
+      - '22181'
+    networks:
+      - internal
 
   kafka:
     image: confluentinc/cp-kafka:latest
@@ -43,7 +63,9 @@ services:
     depends_on:
       - zookeeper
     ports:
-      - 29092:29092
+      - '29092:29092'
+    expose:
+      - '29092'
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -51,3 +73,9 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - internal
+
+networks:
+  internal:
+    external: false
