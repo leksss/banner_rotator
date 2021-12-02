@@ -1,11 +1,11 @@
 env: dev
 
 http:
-  host: localhost
+  host: app
   port: 8080
 
 grpc:
-  host: localhost
+  host: app
   port: 8081
 
 logger:
@@ -14,6 +14,7 @@ logger:
 
 database:
   host: mysql
+  port: 3306
   user: user
   password: J1JyJovTelvERLF9
   name: banner_rotator

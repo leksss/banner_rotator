@@ -29,7 +29,7 @@ const (
 )
 
 func main() {
-	configFile := flag.String("config", "configs/config_docker.yaml", "path to conf file")
+	configFile := flag.String("config", "configs/config.yaml", "path to conf file")
 	flag.Parse()
 	if flag.Arg(0) == "version" {
 		printVersion()
@@ -77,6 +77,7 @@ func main() {
 	}()
 
 	go func() {
+		time.Sleep(500 * time.Millisecond)
 		errs <- server.StartHTTPProxy()
 	}()
 

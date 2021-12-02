@@ -38,6 +38,4 @@ COPY --from=build ${CONFIG_FILE} ${CONFIG_FILE}
 COPY --from=build ${LOG_FILE} ${LOG_FILE}
 COPY --from=build ${START_FILE} ${START_FILE}
 
-EXPOSE 8080 8081
-
 CMD ${START_FILE}
