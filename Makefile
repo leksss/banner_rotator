@@ -14,11 +14,14 @@ run:
 stop:
 	docker-compose -f build/docker-compose.yaml down
 
-version: build
-	$(BIN) version
-
 test:
 	go test -race -count 100 ./internal/...
+
+integration-test:
+	go test ./... -v -race -tags=integration
+
+version: build
+	$(BIN) version
 
 install-lint-deps:
 	(which golangci-lint > /dev/null) || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v1.37.0
