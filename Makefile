@@ -14,6 +14,12 @@ run:
 stop:
 	docker-compose -f build/docker-compose.yaml down
 
+ps:
+	docker-compose -f build/docker-compose.yaml ps
+
+log:
+	docker-compose -f build/docker-compose.yaml logs -f
+
 test:
 	go test -race -count 100 ./internal/...
 

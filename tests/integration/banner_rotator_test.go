@@ -58,7 +58,7 @@ func (s *BannerRotatorSuite) TearDownTest() {
 	s.db.Close()
 }
 
-func TestChessSuite(t *testing.T) {
+func TestBannerRotatorSuite(t *testing.T) {
 	suite.Run(t, new(BannerRotatorSuite))
 }
 
@@ -68,12 +68,12 @@ func (s *BannerRotatorSuite) TestAddTheSameBannerTwice() {
 		BannerID: 1,
 	}
 	response, _ := s.client.AddBanner(s.ctx, request)
-	s.Require().True(response.Success)
-	s.Require().Equal(0, len(response.Errors))
+	s.Require().True(response.GetSuccess())
+	s.Require().Equal(0, len(response.GetErrors()))
 
 	response, _ = s.client.AddBanner(s.ctx, request)
-	s.Require().False(response.Success)
-	s.Require().Equal(1, len(response.Errors))
+	s.Require().False(response.GetSuccess())
+	s.Require().Equal(1, len(response.GetErrors()))
 }
 
 func (s *BannerRotatorSuite) TestRemoveBanner() {
@@ -81,30 +81,69 @@ func (s *BannerRotatorSuite) TestRemoveBanner() {
 		SlotID:   1,
 		BannerID: 1,
 	})
-	s.Require().True(addResponse.Success)
+	s.Require().True(addResponse.GetSuccess())
 
 	getResponse, _ := s.client.GetBanner(s.ctx, &pb.GetBannerRequest{
 		SlotID:  1,
 		GroupID: 1,
 	})
-	s.Require().True(getResponse.Success)
-	s.Require().Equal(uint64(1), getResponse.BannerID)
+	s.Require().True(getResponse.GetSuccess())
+	s.Require().Equal(uint64(1), getResponse.GetBannerID())
 
 	removeResponse, _ := s.client.RemoveBanner(s.ctx, &pb.RemoveBannerRequest{
 		SlotID:   1,
 		BannerID: 1,
 	})
-	s.Require().True(getResponse.Success)
-	s.Require().Equal(0, len(removeResponse.Errors))
+	s.Require().True(getResponse.GetSuccess())
+	s.Require().Equal(0, len(removeResponse.GetErrors()))
 
 	getResponse, _ = s.client.GetBanner(s.ctx, &pb.GetBannerRequest{
 		SlotID:  1,
 		GroupID: 1,
 	})
-	s.Require().False(getResponse.Success)
-	s.Require().Equal(uint64(0), getResponse.BannerID)
+	s.Require().False(getResponse.GetSuccess())
+	s.Require().Equal(uint64(0), getResponse.GetBannerID())
 }
 
-//func (s *BannerRotatorSuite) TestHitBanner() {
-//
-//}
+func (s *BannerRotatorSuite) TestGetAndHitBanner() {
+	bannersCount := uint64(3)
+
+	var i uint64
+	for i = 1; i <= bannersCount; i++ {
+		addResponse, _ := s.client.AddBanner(s.ctx, &pb.AddBannerRequest{
+			SlotID:   1,
+			BannerID: i,
+		})
+		s.Require().True(addResponse.GetSuccess())
+	}
+
+	bannerMap := make(map[uint64]uint64)
+	for i = 1; i <= 10; i++ {
+		getResponse, _ := s.client.GetBanner(s.ctx, &pb.GetBannerRequest{
+			SlotID:  1,
+			GroupID: 1,
+		})
+		s.Require().True(getResponse.GetSuccess())
+		bannerMap[getResponse.GetBannerID()] = getResponse.GetBannerID()
+	}
+	s.Require().Equal(int(bannersCount), len(bannerMap))
+
+	favoriteBannerID := uint64(2)
+	for i = 1; i <= 10; i++ {
+		getResponse, _ := s.client.HitBanner(s.ctx, &pb.HitBannerRequest{
+			SlotID:   1,
+			GroupID:  1,
+			BannerID: favoriteBannerID,
+		})
+		s.Require().True(getResponse.GetSuccess())
+	}
+
+	for i = 1; i <= 10; i++ {
+		getResponse, _ := s.client.GetBanner(s.ctx, &pb.GetBannerRequest{
+			SlotID:  1,
+			GroupID: 1,
+		})
+		s.Require().True(getResponse.GetSuccess())
+		s.Require().Equal(favoriteBannerID, getResponse.GetBannerID())
+	}
+}
