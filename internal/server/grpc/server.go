@@ -43,6 +43,7 @@ func (s *Server) StartGRPC() error {
 	if err != nil {
 		s.log.Error("failed to listen:", zap.Error(err))
 	}
+
 	s.grpc = grpc.NewServer(
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
 			grpc_zap.StreamServerInterceptor(s.log.GetLogger()),
@@ -57,9 +58,9 @@ func (s *Server) StartGRPC() error {
 	return s.grpc.Serve(lis)
 }
 
-func (s *Server) StartHTTPProxy() error {
+func (s *Server) StartHTTPProxy(ctx context.Context) error {
 	conn, err := grpc.DialContext(
-		context.Background(),
+		ctx,
 		s.grpcAddr,
 		grpc.WithBlock(),
 		grpc.WithInsecure(),

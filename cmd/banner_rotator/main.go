@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -76,39 +75,35 @@ func main() {
 		errs <- server.StartGRPC()
 	}()
 
-	go func() {
+	go func(ctx context.Context) {
 		time.Sleep(500 * time.Millisecond)
-		errs <- server.StartHTTPProxy()
-	}()
+		errs <- server.StartHTTPProxy(ctx)
+	}(ctx)
 
-	go func() {
-		quit := make(chan os.Signal, 1)
-		signal.Notify(quit, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
-		sig := <-quit
-
-		logg.Warn("os signal received, beginning graceful shutdown with timeout",
-			zap.String("signal", sig.String()),
-			zap.Duration("timeout", gracefulShutdownTimeout),
-		)
+	go func(ctx context.Context) {
+		<-ctx.Done()
 
 		success := make(chan string)
 		go func() {
-			errs <- server.StopHTTPProxy(context.Background())
+			errs <- server.StopHTTPProxy(ctx)
 			success <- "HTTP server successfully stopped"
 		}()
+
 		go func() {
 			server.StopGRPC()
 			success <- "gRPC server successfully stopped"
 		}()
+
 		go func() {
 			time.Sleep(gracefulShutdownTimeout)
 			logg.Error("failed to gracefully shut down server within timeout. Shutting down with Fatal",
 				zap.Duration("timeout", gracefulShutdownTimeout))
 		}()
+
 		logg.Info(<-success)
 		logg.Info(<-success)
 		errs <- errors.New(appShutdownMessage)
-	}()
+	}(ctx)
 
 	for err := range errs {
 		if err == nil {
