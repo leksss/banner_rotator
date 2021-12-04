@@ -6,19 +6,25 @@ GIT_HASH := $(shell git log --format="%h" -n 1)
 LDFLAGS := -X main.release="develop" -X main.buildDate=$(shell date -u +%Y-%m-%dT%H:%M:%S) -X main.gitHash=$(GIT_HASH)
 
 build:
-	docker-compose -f build/docker-compose.yaml build --no-cache
+	docker-compose -f build/docker-compose.yaml -f build/docker-compose.app.yaml build --no-cache
 
 run:
+	docker-compose -f build/docker-compose.yaml -f build/docker-compose.app.yaml up -d --build
+
+run-dev:
 	docker-compose -f build/docker-compose.yaml up -d --build
 
 stop:
+	docker-compose -f build/docker-compose.yaml -f build/docker-compose.app.yaml down
+
+stop-dev:
 	docker-compose -f build/docker-compose.yaml down
 
 ps:
-	docker-compose -f build/docker-compose.yaml ps
+	docker-compose -f build/docker-compose.yaml -f build/docker-compose.app.yaml ps
 
 log:
-	docker-compose -f build/docker-compose.yaml logs -f
+	docker-compose -f build/docker-compose.yaml -f build/docker-compose.app.yaml logs -f
 
 test:
 	go test -race -count 100 ./internal/...
