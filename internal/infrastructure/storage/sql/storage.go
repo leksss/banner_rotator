@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 
 	_ "github.com/go-sql-driver/mysql" // nolint
 	"github.com/jmoiron/sqlx"
@@ -24,6 +25,7 @@ const (
 type Storage struct {
 	db  *sqlx.DB
 	log interfaces.Log
+	mu  sync.RWMutex
 }
 
 func New(db *sqlx.DB, log interfaces.Log) *Storage {
@@ -56,6 +58,9 @@ func (s *Storage) IncrementShow(ctx context.Context, slotID, bannerID, groupID u
 }
 
 func (s *Storage) incrementCounter(ctx context.Context, slotID, bannerID, groupID uint64, field string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if slotID == 0 || bannerID == 0 || groupID == 0 {
 		s.log.Error("Invalid params: slotID, bannerID, groupID")
 		return nil
