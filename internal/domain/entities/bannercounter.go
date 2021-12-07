@@ -1,3 +1,3 @@
 package entities
 
-type BannerCounterMap map[BannerID]*Counter
+type BannerCounterMap map[BannerID]Counter

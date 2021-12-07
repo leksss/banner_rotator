@@ -136,7 +136,7 @@ func (s *Storage) GetSlotCounters(ctx context.Context, slotID, groupID uint64) (
 		if err != nil {
 			return nil, err
 		}
-		counters[entities.BannerID(row.BannerID)] = &entities.Counter{
+		counters[entities.BannerID(row.BannerID)] = entities.Counter{
 			SlotID:   row.SlotID,
 			BannerID: row.BannerID,
 			GroupID:  row.GroupID,
