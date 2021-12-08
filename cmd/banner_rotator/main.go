@@ -23,8 +23,9 @@ import (
 //go:generate ../proto_generator.sh
 
 const (
-	appShutdownMessage      = "application exits"
-	gracefulShutdownTimeout = 3 * time.Second
+	appShutdownMessage = "application exits"
+	serverDownTimeout  = 1 * time.Second
+	serverStartTimeout = 500 * time.Millisecond
 )
 
 func main() {
@@ -70,50 +71,51 @@ func main() {
 	server := grpc.NewServer(logg, conf, storage, bus)
 
 	errs := make(chan error)
-
-	go func() {
-		errs <- server.StartGRPC()
-	}()
-
-	go func(ctx context.Context) {
-		time.Sleep(500 * time.Millisecond)
-		errs <- server.StartHTTPProxy(ctx)
-	}(ctx)
-
-	go func(ctx context.Context) {
-		<-ctx.Done()
-
-		success := make(chan string)
-		go func() {
-			errs <- server.StopHTTPProxy(ctx)
-			success <- "HTTP server successfully stopped"
-		}()
-
-		go func() {
-			server.StopGRPC()
-			success <- "gRPC server successfully stopped"
-		}()
-
-		go func() {
-			time.Sleep(gracefulShutdownTimeout)
-			logg.Error("failed to gracefully shut down server within timeout. Shutting down with Fatal",
-				zap.Duration("timeout", gracefulShutdownTimeout))
-		}()
-
-		logg.Info(<-success)
-		logg.Info(<-success)
-		errs <- errors.New(appShutdownMessage)
-	}(ctx)
+	serviceStart(ctx, server, errs)
+	serviceStop(ctx, server, errs)
 
 	for err := range errs {
 		if err == nil {
 			continue
 		}
-		logg.Warn("shutdown err message", zap.Error(err))
+		logg.Info("shutdown err message", zap.Error(err))
 		if err.Error() == appShutdownMessage {
 			return
 		}
 	}
+}
+
+func serviceStart(ctx context.Context, server *grpc.Server, errs chan<- error) {
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), serverStartTimeout)
+	defer cancel()
+
+	go func() {
+		errs <- server.StartGRPC()
+	}()
+
+	<-timeoutCtx.Done()
+
+	go func(ctx context.Context) {
+		errs <- server.StartHTTPProxy(ctx)
+	}(ctx)
+}
+
+func serviceStop(ctx context.Context, server *grpc.Server, errs chan<- error) {
+	<-ctx.Done()
+
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), serverDownTimeout)
+	defer cancel()
+
+	go func(ctx context.Context) {
+		errs <- server.StopHTTPProxy(ctx)
+	}(timeoutCtx)
+
+	<-timeoutCtx.Done()
+
+	go func() {
+		server.StopGRPC()
+		errs <- errors.New(appShutdownMessage)
+	}()
 }
 
 func createKafkaConfig() *sarama.Config {
