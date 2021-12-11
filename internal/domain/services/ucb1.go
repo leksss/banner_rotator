@@ -23,7 +23,7 @@ func CalculateBestBanner(bannerIDs []entities.BannerID, counters entities.Banner
 	for _, bannerID := range bannerIDs {
 		c, ok := counters[bannerID]
 		if !ok || c.ShowCnt == 0 {
-			c = &entities.Counter{HitCnt: 0, ShowCnt: 1}
+			c = entities.Counter{HitCnt: 0, ShowCnt: 1}
 		}
 
 		rate := c.HitCnt/c.ShowCnt + math.Sqrt((2*math.Log(totalShowCnt))/c.ShowCnt)
