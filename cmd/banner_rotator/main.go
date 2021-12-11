@@ -7,7 +7,6 @@ import (
 	"log"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/jmoiron/sqlx"
@@ -16,17 +15,10 @@ import (
 	"github.com/leksss/banner_rotator/internal/infrastructure/logger"
 	mysql "github.com/leksss/banner_rotator/internal/infrastructure/storage/sql"
 	grpc "github.com/leksss/banner_rotator/internal/server/grpc"
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
 //go:generate ../proto_generator.sh
-
-const (
-	appShutdownMessage = "application exits"
-	serverDownTimeout  = 1 * time.Second
-	serverStartTimeout = 500 * time.Millisecond
-)
 
 func main() {
 	configFile := flag.String("config", "configs/config.yaml", "path to conf file")
@@ -37,8 +29,7 @@ func main() {
 	}
 
 	conf := config.NewConfig(*configFile)
-	err := conf.Parse()
-	if err != nil {
+	if err := conf.Parse(); err != nil {
 		log.Fatal(err.Error()) //nolintlint
 	}
 
@@ -69,53 +60,9 @@ func main() {
 	bus := eventbus.New(kafkaConn, conf.Kafka.Topic, logg)
 
 	server := grpc.NewServer(logg, conf, storage, bus)
-
-	errs := make(chan error)
-	serviceStart(ctx, server, errs)
-	serviceStop(ctx, server, errs)
-
-	for err := range errs {
-		if err == nil {
-			continue
-		}
-		logg.Info("shutdown err message", zap.Error(err))
-		if err.Error() == appShutdownMessage {
-			return
-		}
-	}
-}
-
-func serviceStart(ctx context.Context, server *grpc.Server, errs chan<- error) {
-	timeoutCtx, cancel := context.WithTimeout(context.Background(), serverStartTimeout)
-	defer cancel()
-
-	go func() {
-		errs <- server.StartGRPC()
-	}()
-
-	<-timeoutCtx.Done()
-
-	go func(ctx context.Context) {
-		errs <- server.StartHTTPProxy(ctx)
-	}(ctx)
-}
-
-func serviceStop(ctx context.Context, server *grpc.Server, errs chan<- error) {
+	server.Start(ctx)
 	<-ctx.Done()
-
-	timeoutCtx, cancel := context.WithTimeout(context.Background(), serverDownTimeout)
-	defer cancel()
-
-	go func(ctx context.Context) {
-		errs <- server.StopHTTPProxy(ctx)
-	}(timeoutCtx)
-
-	<-timeoutCtx.Done()
-
-	go func() {
-		server.StopGRPC()
-		errs <- errors.New(appShutdownMessage)
-	}()
+	server.Stop(ctx)
 }
 
 func createKafkaConfig() *sarama.Config {
