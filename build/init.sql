@@ -3,50 +3,48 @@ CREATE TABLE IF NOT EXISTS `slot`
     `id`          INT(11)     NOT NULL AUTO_INCREMENT,
     `description` VARCHAR(50) NOT NULL DEFAULT '',
     PRIMARY KEY (`id`)
-    ) ENGINE = InnoDB
-    DEFAULT CHARSET = utf8
-    COLLATE = utf8_general_ci;
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8
+  COLLATE = utf8_general_ci;
 
 CREATE TABLE IF NOT EXISTS `banner`
 (
     `id`          INT(11)     NOT NULL AUTO_INCREMENT,
     `description` VARCHAR(50) NOT NULL DEFAULT '',
     PRIMARY KEY (`id`)
-    ) ENGINE = InnoDB
-    DEFAULT CHARSET = utf8
-    COLLATE = utf8_general_ci;
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8
+  COLLATE = utf8_general_ci;
 
 CREATE TABLE IF NOT EXISTS `group`
 (
     `id`          INT(11)     NOT NULL AUTO_INCREMENT,
     `description` VARCHAR(50) NOT NULL DEFAULT '',
     PRIMARY KEY (`id`)
-    ) ENGINE = InnoDB
-    DEFAULT CHARSET = utf8
-    COLLATE = utf8_general_ci;
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8
+  COLLATE = utf8_general_ci;
 
 CREATE TABLE IF NOT EXISTS `slot2banner`
 (
     `slot_id`   INT(11) NOT NULL DEFAULT 0,
     `banner_id` INT(11) NOT NULL DEFAULT 0,
     PRIMARY KEY (`slot_id`, `banner_id`)
-    ) ENGINE = InnoDB
-    DEFAULT CHARSET = utf8
-    COLLATE = utf8_general_ci;
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8
+  COLLATE = utf8_general_ci;
 
 CREATE TABLE IF NOT EXISTS `ucb1`
 (
-    `id`        INT(11) NOT NULL AUTO_INCREMENT,
     `slot_id`   INT(11) NOT NULL DEFAULT 0,
     `banner_id` INT(11) NOT NULL DEFAULT 0,
     `group_id`  INT(11) NOT NULL DEFAULT 0,
     `hit_cnt`   INT(11) NOT NULL DEFAULT 0,
     `show_cnt`  INT(11) NOT NULL DEFAULT 0,
-    PRIMARY KEY (`id`),
-    UNIQUE KEY (`slot_id`, `banner_id`, `group_id`)
-    ) ENGINE = InnoDB
-    DEFAULT CHARSET = utf8
-    COLLATE = utf8_general_ci;
+    PRIMARY KEY (`slot_id`, `banner_id`, `group_id`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8
+  COLLATE = utf8_general_ci;
 
 INSERT INTO `slot` (`description`)
 VALUES ('слот 1'),

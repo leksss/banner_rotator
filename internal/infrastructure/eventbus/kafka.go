@@ -8,6 +8,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/leksss/banner_rotator/internal/domain/entities"
 	"github.com/leksss/banner_rotator/internal/domain/interfaces"
+	"go.uber.org/zap"
 )
 
 type KafkaEventBus struct {
@@ -27,6 +28,7 @@ func New(conn sarama.SyncProducer, topic string, log interfaces.Log) *KafkaEvent
 func (k *KafkaEventBus) AddEvent(ctx context.Context, stat entities.EventStat) error {
 	statJSON, err := json.Marshal(stat)
 	if err != nil {
+		k.log.Error("add event", zap.Error(err))
 		return err
 	}
 	msg := &sarama.ProducerMessage{
@@ -35,6 +37,7 @@ func (k *KafkaEventBus) AddEvent(ctx context.Context, stat entities.EventStat) e
 	}
 	_, _, err = k.conn.SendMessage(msg)
 	if err != nil {
+		k.log.Error("add event", zap.Error(err))
 		return err
 	}
 
