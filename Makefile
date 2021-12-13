@@ -11,8 +11,11 @@ build:
 run:
 	docker-compose -f build/docker-compose.yaml -f build/docker-compose.app.yaml up -d --build
 
-run-dev:
+run-external:
 	docker-compose -f build/docker-compose.yaml up -d --build
+
+run-local:
+	go run ./cmd/banner_rotator/
 
 stop:
 	docker-compose -f build/docker-compose.yaml -f build/docker-compose.app.yaml down

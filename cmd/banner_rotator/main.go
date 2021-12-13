@@ -7,7 +7,6 @@ import (
 	"log"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/jmoiron/sqlx"
@@ -16,16 +15,10 @@ import (
 	"github.com/leksss/banner_rotator/internal/infrastructure/logger"
 	mysql "github.com/leksss/banner_rotator/internal/infrastructure/storage/sql"
 	grpc "github.com/leksss/banner_rotator/internal/server/grpc"
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
 //go:generate ../proto_generator.sh
-
-const (
-	appShutdownMessage      = "application exits"
-	gracefulShutdownTimeout = 3 * time.Second
-)
 
 func main() {
 	configFile := flag.String("config", "configs/config.yaml", "path to conf file")
@@ -36,8 +29,7 @@ func main() {
 	}
 
 	conf := config.NewConfig(*configFile)
-	err := conf.Parse()
-	if err != nil {
+	if err := conf.Parse(); err != nil {
 		log.Fatal(err.Error()) //nolintlint
 	}
 
@@ -68,52 +60,9 @@ func main() {
 	bus := eventbus.New(kafkaConn, conf.Kafka.Topic, logg)
 
 	server := grpc.NewServer(logg, conf, storage, bus)
-
-	errs := make(chan error)
-
-	go func() {
-		errs <- server.StartGRPC()
-	}()
-
-	go func(ctx context.Context) {
-		time.Sleep(500 * time.Millisecond)
-		errs <- server.StartHTTPProxy(ctx)
-	}(ctx)
-
-	go func(ctx context.Context) {
-		<-ctx.Done()
-
-		success := make(chan string)
-		go func() {
-			errs <- server.StopHTTPProxy(ctx)
-			success <- "HTTP server successfully stopped"
-		}()
-
-		go func() {
-			server.StopGRPC()
-			success <- "gRPC server successfully stopped"
-		}()
-
-		go func() {
-			time.Sleep(gracefulShutdownTimeout)
-			logg.Error("failed to gracefully shut down server within timeout. Shutting down with Fatal",
-				zap.Duration("timeout", gracefulShutdownTimeout))
-		}()
-
-		logg.Info(<-success)
-		logg.Info(<-success)
-		errs <- errors.New(appShutdownMessage)
-	}(ctx)
-
-	for err := range errs {
-		if err == nil {
-			continue
-		}
-		logg.Warn("shutdown err message", zap.Error(err))
-		if err.Error() == appShutdownMessage {
-			return
-		}
-	}
+	server.Start(ctx)
+	<-ctx.Done()
+	server.Stop(ctx)
 }
 
 func createKafkaConfig() *sarama.Config {

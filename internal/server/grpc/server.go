@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"time"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
@@ -12,9 +13,12 @@ import (
 	"github.com/leksss/banner_rotator/internal/domain/interfaces"
 	"github.com/leksss/banner_rotator/internal/infrastructure/config"
 	pb "github.com/leksss/banner_rotator/proto/protobuf"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
+
+const serverStartTimeout = 500 * time.Millisecond
 
 type Server struct {
 	grpcAddr string
@@ -25,8 +29,8 @@ type Server struct {
 	eventBus interfaces.EventBus
 }
 
-func NewServer(log interfaces.Log, config config.Config, storage interfaces.Storage,
-	eventBus interfaces.EventBus) *Server {
+func NewServer(log interfaces.Log,
+	config config.Config, storage interfaces.Storage, eventBus interfaces.EventBus) interfaces.StartStopper {
 	return &Server{
 		log:      log,
 		grpcAddr: config.GRPCAddr.DSN(),
@@ -38,7 +42,22 @@ func NewServer(log interfaces.Log, config config.Config, storage interfaces.Stor
 	}
 }
 
-func (s *Server) StartGRPC() error {
+func (s *Server) Start(ctx context.Context) {
+	go func() {
+		s.startGRPC()
+	}()
+	time.Sleep(serverStartTimeout)
+	go func(ctx context.Context) {
+		s.startHTTPProxy(ctx)
+	}(ctx)
+}
+
+func (s *Server) Stop(ctx context.Context) {
+	s.stopHTTPProxy(ctx)
+	s.stopGRPC(ctx)
+}
+
+func (s *Server) startGRPC() {
 	lis, err := net.Listen("tcp", s.grpcAddr)
 	if err != nil {
 		s.log.Error("failed to listen:", zap.Error(err))
@@ -55,10 +74,12 @@ func (s *Server) StartGRPC() error {
 	pb.RegisterBannerRotatorServiceServer(s.grpc, NewBannerRotatorService(s.log, s.storage, s.eventBus))
 
 	s.log.Info(fmt.Sprintf("serving gRPC on %s", s.grpcAddr))
-	return s.grpc.Serve(lis)
+	if err := s.grpc.Serve(lis); err != nil {
+		s.log.Error("serving gRPC failed", zap.Error(err))
+	}
 }
 
-func (s *Server) StartHTTPProxy(ctx context.Context) error {
+func (s *Server) startHTTPProxy(ctx context.Context) {
 	conn, err := grpc.DialContext(
 		ctx,
 		s.grpcAddr,
@@ -76,16 +97,30 @@ func (s *Server) StartHTTPProxy(ctx context.Context) error {
 	}
 
 	s.http.Handler = loggingMiddleware(gwMux, s.log)
+
 	s.log.Info(fmt.Sprintf("serving gRPC-Gateway on %s", s.http.Addr))
-	return s.http.ListenAndServe()
+	if err := s.http.ListenAndServe(); err != nil {
+		if !errors.Is(ctx.Err(), context.Canceled) {
+			s.log.Error("serving gRPC-Gateway failed", zap.Error(err))
+		}
+	}
 }
 
-func (s *Server) StopHTTPProxy(ctx context.Context) error {
-	s.log.Info("stopping HTTP proxy server...")
-	return s.http.Shutdown(ctx)
+func (s *Server) stopHTTPProxy(ctx context.Context) {
+	s.log.Info("stopping gRPC-Gateway...")
+	if err := s.http.Shutdown(ctx); err != nil {
+		if errors.Is(err, context.Canceled) {
+			s.log.Info("gRPC-Gateway has been stopped by canceled context")
+		} else {
+			s.log.Error("stopping gRPC-Gateway failed", zap.Error(err))
+		}
+	}
 }
 
-func (s *Server) StopGRPC() {
+func (s *Server) stopGRPC(ctx context.Context) {
 	s.log.Info("stopping gRPC server...")
 	s.grpc.GracefulStop()
+	if errors.Is(ctx.Err(), context.Canceled) {
+		s.log.Info("gRPC server has been stopped by canceled context")
+	}
 }

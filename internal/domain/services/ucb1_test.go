@@ -18,11 +18,10 @@ func TestUCB1BlankCounters(t *testing.T) {
 		bannerID := CalculateBestBanner(bannerIDs, counters)
 		require.True(t, bannerID != 0)
 
-		if _, ok := counters[bannerID]; ok {
-			counters[bannerID].ShowCnt++
-		} else {
-			counters[bannerID] = &entities.Counter{ShowCnt: 1}
-		}
+		counter := counters[bannerID]
+		counter.ShowCnt++
+		counters[bannerID] = counter
+
 		showStat[bannerID]++
 	}
 
@@ -46,7 +45,10 @@ func TestUCB1ZeroCounters(t *testing.T) {
 		bannerID := CalculateBestBanner(bannerIDs, counters)
 		require.True(t, bannerID != 0)
 
-		counters[bannerID].ShowCnt++
+		counter := counters[bannerID]
+		counter.ShowCnt++
+		counters[bannerID] = counter
+
 		showStat[bannerID]++
 	}
 	for _, bannerID := range bannerIDs {
@@ -69,7 +71,10 @@ func TestUCB1PopularBanner(t *testing.T) {
 		bannerID := CalculateBestBanner(bannerIDs, counters)
 		require.True(t, bannerID != 0)
 
-		counters[bannerID].ShowCnt++
+		counter := counters[bannerID]
+		counter.ShowCnt++
+		counters[bannerID] = counter
+
 		showStat[bannerID]++
 	}
 

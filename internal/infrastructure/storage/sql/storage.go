@@ -16,9 +16,6 @@ import (
 const (
 	slotLimit = 20
 	statLimit = 100
-
-	hitField  = "hit_cnt"
-	showField = "show_cnt"
 )
 
 type Storage struct {
@@ -48,73 +45,41 @@ func (s *Storage) RemoveBanner(ctx context.Context, slotID, bannerID uint64) err
 }
 
 func (s *Storage) IncrementHit(ctx context.Context, slotID, bannerID, groupID uint64) error {
-	return s.incrementCounter(ctx, slotID, bannerID, groupID, hitField)
-}
-
-func (s *Storage) IncrementShow(ctx context.Context, slotID, bannerID, groupID uint64) error {
-	return s.incrementCounter(ctx, slotID, bannerID, groupID, showField)
-}
-
-func (s *Storage) incrementCounter(ctx context.Context, slotID, bannerID, groupID uint64, field string) error {
 	if slotID == 0 || bannerID == 0 || groupID == 0 {
 		s.log.Error("Invalid params: slotID, bannerID, groupID")
 		return nil
 	}
+	query := `INSERT INTO ucb1 (slot_id, banner_id, group_id, hit_cnt) 
+				VALUES (:slotID, :bannerID, :groupID, 1)
+  				ON DUPLICATE KEY UPDATE hit_cnt=hit_cnt+1`
 	params := map[string]interface{}{
 		"slotID":   slotID,
 		"bannerID": bannerID,
 		"groupID":  groupID,
 	}
-	query := `SELECT id, slot_id, banner_id, group_id, hit_cnt, show_cnt 
-				FROM ucb1 
-				WHERE slot_id=:slotID 
-					AND banner_id=:bannerID 
-					AND group_id=:groupID`
-	rows, err := s.queryContext(ctx, query, params)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
+	_, err := s.execContext(ctx, query, params)
+	return err
+}
 
-	query = `INSERT INTO ucb1 (slot_id, banner_id, group_id, hit_cnt, show_cnt) 
-					VALUES (:slotID, :bannerID, :groupID, :hitCnt, :showCnt)`
-	if field == hitField {
-		params["hitCnt"] = 1
-		params["showCnt"] = 0
+func (s *Storage) IncrementShow(ctx context.Context, slotID, bannerID, groupID uint64) error {
+	if slotID == 0 || bannerID == 0 || groupID == 0 {
+		s.log.Error("Invalid params: slotID, bannerID, groupID")
+		return nil
 	}
-	if field == showField {
-		params["hitCnt"] = 0
-		params["showCnt"] = 1
+	query := `INSERT INTO ucb1 (slot_id, banner_id, group_id, show_cnt) 
+				VALUES (:slotID, :bannerID, :groupID, 1)
+  				ON DUPLICATE KEY UPDATE show_cnt=show_cnt+1`
+	params := map[string]interface{}{
+		"slotID":   slotID,
+		"bannerID": bannerID,
+		"groupID":  groupID,
 	}
-
-	var row ucb1Row
-	if rows.Next() {
-		if err = rows.StructScan(&row); err != nil {
-			return err
-		}
-		query = `UPDATE ucb1 SET 
-						hit_cnt=:hitCnt, 
-						show_cnt=:showCnt 
-					WHERE slot_id=:slotID 
-						AND banner_id=:bannerID 
-						AND group_id=:groupID`
-		if field == hitField {
-			row.HitCnt++
-			params["hitCnt"] = row.HitCnt
-			params["showCnt"] = row.ShowCnt
-		}
-		if field == showField {
-			row.ShowCnt++
-			params["hitCnt"] = row.HitCnt
-			params["showCnt"] = row.ShowCnt
-		}
-	}
-	_, err = s.execContext(ctx, query, params)
+	_, err := s.execContext(ctx, query, params)
 	return err
 }
 
 func (s *Storage) GetSlotCounters(ctx context.Context, slotID, groupID uint64) (entities.BannerCounterMap, error) {
-	query := `SELECT id, slot_id, banner_id, group_id, hit_cnt, show_cnt  
+	query := `SELECT slot_id, banner_id, group_id, hit_cnt, show_cnt  
 				FROM ucb1 
 				WHERE slot_id=:slotID AND group_id=:groupID 
 				LIMIT :statLimit`
@@ -136,7 +101,7 @@ func (s *Storage) GetSlotCounters(ctx context.Context, slotID, groupID uint64) (
 		if err != nil {
 			return nil, err
 		}
-		counters[entities.BannerID(row.BannerID)] = &entities.Counter{
+		counters[entities.BannerID(row.BannerID)] = entities.Counter{
 			SlotID:   row.SlotID,
 			BannerID: row.BannerID,
 			GroupID:  row.GroupID,
