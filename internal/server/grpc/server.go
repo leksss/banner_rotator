@@ -70,6 +70,7 @@ func (s *Server) startGRPC() {
 	lis, err := net.Listen("tcp", s.grpcAddr)
 	if err != nil {
 		s.log.Error("failed to listen:", zap.Error(err))
+		return // TODO add server reconnect
 	}
 
 	s.grpc = grpc.NewServer(
