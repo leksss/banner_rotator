@@ -48,12 +48,14 @@ func NewServer(log interfaces.Log,
 func (s *Server) Start(ctx context.Context) {
 	s.wg.Add(1)
 	go func() {
+		defer s.wg.Done()
 		s.startGRPC()
 	}()
 	time.Sleep(serverStartTimeout)
 
 	s.wg.Add(1)
 	go func(ctx context.Context) {
+		defer s.wg.Done()
 		s.startHTTPProxy(ctx)
 	}(ctx)
 }
@@ -65,8 +67,6 @@ func (s *Server) Stop(ctx context.Context) {
 }
 
 func (s *Server) startGRPC() {
-	defer s.wg.Done()
-
 	lis, err := net.Listen("tcp", s.grpcAddr)
 	if err != nil {
 		s.log.Error("failed to listen:", zap.Error(err))
@@ -89,8 +89,6 @@ func (s *Server) startGRPC() {
 }
 
 func (s *Server) startHTTPProxy(ctx context.Context) {
-	defer s.wg.Done()
-
 	conn, err := grpc.DialContext(
 		ctx,
 		s.grpcAddr,
