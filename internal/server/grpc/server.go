@@ -98,6 +98,7 @@ func (s *Server) startHTTPProxy(ctx context.Context) {
 	)
 	if err != nil {
 		s.log.Error("failed to dial server:", zap.Error(err))
+		return // TODO add server reconnect
 	}
 
 	gwMux := runtime.NewServeMux()
