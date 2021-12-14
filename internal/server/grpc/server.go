@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -22,6 +23,7 @@ const serverStartTimeout = 500 * time.Millisecond
 
 type Server struct {
 	grpcAddr string
+	wg       *sync.WaitGroup
 	http     *http.Server
 	grpc     *grpc.Server
 	log      interfaces.Log
@@ -39,14 +41,18 @@ func NewServer(log interfaces.Log,
 		},
 		storage:  storage,
 		eventBus: eventBus,
+		wg:       &sync.WaitGroup{},
 	}
 }
 
 func (s *Server) Start(ctx context.Context) {
+	s.wg.Add(1)
 	go func() {
 		s.startGRPC()
 	}()
 	time.Sleep(serverStartTimeout)
+
+	s.wg.Add(1)
 	go func(ctx context.Context) {
 		s.startHTTPProxy(ctx)
 	}(ctx)
@@ -55,9 +61,12 @@ func (s *Server) Start(ctx context.Context) {
 func (s *Server) Stop(ctx context.Context) {
 	s.stopHTTPProxy(ctx)
 	s.stopGRPC(ctx)
+	s.wg.Wait()
 }
 
 func (s *Server) startGRPC() {
+	defer s.wg.Done()
+
 	lis, err := net.Listen("tcp", s.grpcAddr)
 	if err != nil {
 		s.log.Error("failed to listen:", zap.Error(err))
@@ -80,6 +89,8 @@ func (s *Server) startGRPC() {
 }
 
 func (s *Server) startHTTPProxy(ctx context.Context) {
+	defer s.wg.Done()
+
 	conn, err := grpc.DialContext(
 		ctx,
 		s.grpcAddr,
