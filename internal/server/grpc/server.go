@@ -19,7 +19,9 @@ import (
 	"google.golang.org/grpc"
 )
 
-const serverStartTimeout = 500 * time.Millisecond
+const (
+	restartTimeout = time.Second
+)
 
 type Server struct {
 	grpcAddr string
@@ -47,11 +49,10 @@ func NewServer(log interfaces.Log,
 
 func (s *Server) Start(ctx context.Context) {
 	s.wg.Add(1)
-	go func() {
+	go func(ctx context.Context) {
 		defer s.wg.Done()
-		s.startGRPC()
-	}()
-	time.Sleep(serverStartTimeout)
+		s.startGRPC(ctx)
+	}(ctx)
 
 	s.wg.Add(1)
 	go func(ctx context.Context) {
@@ -66,11 +67,20 @@ func (s *Server) Stop(ctx context.Context) {
 	s.wg.Wait()
 }
 
-func (s *Server) startGRPC() {
-	lis, err := net.Listen("tcp", s.grpcAddr)
-	if err != nil {
-		s.log.Error("failed to listen:", zap.Error(err))
-		return // TODO add server reconnect
+func (s *Server) startGRPC(ctx context.Context) {
+	var lis net.Listener
+	var err error
+	for {
+		if lis, err = net.Listen("tcp", s.grpcAddr); err == nil {
+			break
+		}
+		s.log.Warn(fmt.Sprint("gRPC listener failed — restarting in ", restartTimeout), zap.Error(err))
+		select {
+		case <-ctx.Done():
+			break
+		case <-time.After(restartTimeout):
+			continue
+		}
 	}
 
 	s.grpc = grpc.NewServer(
@@ -90,15 +100,19 @@ func (s *Server) startGRPC() {
 }
 
 func (s *Server) startHTTPProxy(ctx context.Context) {
-	conn, err := grpc.DialContext(
-		ctx,
-		s.grpcAddr,
-		grpc.WithBlock(),
-		grpc.WithInsecure(),
-	)
-	if err != nil {
-		s.log.Error("failed to dial server:", zap.Error(err))
-		return // TODO add server reconnect
+	var conn *grpc.ClientConn
+	var err error
+	for {
+		if conn, err = grpc.DialContext(ctx, s.grpcAddr, grpc.WithBlock(), grpc.WithInsecure()); err == nil {
+			break
+		}
+		s.log.Warn(fmt.Sprint("failed to dial gRPC server — restarting in ", restartTimeout), zap.Error(err))
+		select {
+		case <-ctx.Done():
+			break
+		case <-time.After(restartTimeout):
+			continue
+		}
 	}
 
 	gwMux := runtime.NewServeMux()
